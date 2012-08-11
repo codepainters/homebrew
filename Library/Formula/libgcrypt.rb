@@ -22,6 +22,11 @@ class Libgcrypt < Formula
       ENV.append 'CFLAGS', '-fheinous-gnu-extensions'
     end
 
+    ENV.macosxsdk "10.8"
+    ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
+    ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
+    ENV.append_to_cflags("-mmacosx-version-min=10.6")
+
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--disable-asm",

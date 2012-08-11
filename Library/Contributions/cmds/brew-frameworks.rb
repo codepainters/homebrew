@@ -20,7 +20,10 @@ frameworks.mkpath
 libraries = { "libpurple" => ["libpurple.0.dylib"],
 	          "glib" => ["libglib-2.0.0.dylib", "libgmodule-2.0.0.dylib", "libgobject-2.0.0.dylib", "libgthread-2.0.0.dylib"],
 	          "meanwhile" => ["libmeanwhile.1.0.2.dylib"],
-	          "gettext" => ["libintl.8.dylib"]
+	          "gettext" => ["libintl.8.dylib"],
+	          "libgcrypt" => ["libgcrypt.11.dylib"],
+	          "libgpg-error" => ["libgpg-error.0.dylib"],
+	          "libotr" => ["libotr.2.2.0.dylib"]
 			}
 
 libs_to_convert = []
@@ -60,8 +63,13 @@ libraries.each { | name, libs |
 
 		Dir[f.include / '*'].each { |header_path|
 			if not File.file? header_path then 
-				headers << "#{header_path}"
+				headers << header_path
 			end
+		}
+
+		Dir[f.lib / '*' / "include"].each { |header_path|
+			headers << header_path
+			ohai header_path
 		}
 
 		headers << f.include if headers.length == 0
@@ -88,5 +96,8 @@ ohai "Fetching libpurple.h and Info.plist"
 
 curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/libpurple-full.h", "-o", frameworks / "libpurple.subproj" / "libpurple.framework" / "Headers" / "libpurple.h"
 curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/Libpurple-Info.plist", "-o", frameworks / "libpurple.subproj" / "libpurple.framework" / "Resources" / "Info.plist"
+
+
+curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/Libotr-Info.plist", "-o", frameworks / "libotr.subproj" / "libotr.framework" / "Resources" / "Info.plist"
 
 ohai "Done!"

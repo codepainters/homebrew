@@ -7,6 +7,12 @@ class LibgpgError < Formula
 
   def install
     ENV.universal_binary  # build fat so wine can use it
+
+    ENV.macosxsdk "10.8"
+    ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
+    ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
+    ENV.append_to_cflags("-mmacosx-version-min=10.6")
+
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}"
     system "make install"

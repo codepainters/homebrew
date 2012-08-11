@@ -44,6 +44,7 @@ class Gettext < Formula
                           "--without-included-libcroco",
                           "--without-included-libxml",
                           "--without-emacs",
+                          "--disable-java",
                           # Don't use VCS systems to create these archives
                           "--without-git",
                           "--without-cvs"
