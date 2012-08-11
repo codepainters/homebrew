@@ -59,6 +59,38 @@ class Libpurple < Formula
     system "make update-po"
     system "make all"
     system "make install"
+
+    ohai "Adding libpurple internal headers"
+
+    Dir.chdir ".."
+
+    internals = ["libpurple/protocols/oscar/oscar.h",
+      "libpurple/protocols/oscar/snactypes.h",
+      "libpurple/protocols/oscar/peer.h",
+      "libpurple/cmds.h",
+      "libpurple/internal.h",
+      "libpurple/protocols/msn/*.h",
+      "libpurple/protocols/yahoo/*.h",
+      "libpurple/protocols/gg/buddylist.h",
+      "libpurple/protocols/gg/gg.h",
+      "libpurple/protocols/gg/search.h",
+      "libpurple/protocols/jabber/auth.h",
+      "libpurple/protocols/jabber/bosh.h",
+      "libpurple/protocols/jabber/buddy.h",
+      "libpurple/protocols/jabber/caps.h",
+      "libpurple/protocols/jabber/chat.h",
+      "libpurple/protocols/jabber/jutil.h",
+      "libpurple/protocols/jabber/presence.h",
+      "libpurple/protocols/jabber/si.h",
+      "libpurple/protocols/jabber/jabber.h",
+      "libpurple/protocols/jabber/iq.h",
+      "libpurple/protocols/jabber/namespaces.h",
+      "libpurple/protocols/irc/irc.h",
+      "libpurple/protocols/gg/lib/libgadu.h"]
+
+    internals.each {|internal|
+      (include/"libpurple").install Dir[internal]
+    }
   end
 
   def test

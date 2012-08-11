@@ -17,7 +17,7 @@ class Glib < Formula
   end
 
   def patches
-    mp = "http://hg.adium.im/adium/raw-file/tip/Dependencies/patches/"
+    mp = "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/patches/"
     {
       :p0 => [
         mp+"glib-gconvert.c.diff",

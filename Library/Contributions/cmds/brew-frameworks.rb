@@ -22,6 +22,9 @@ libraries = { "libpurple" => ["libpurple.0.dylib"],
 	          "gettext" => ["libintl.8.dylib"]
 			}
 
+libs_to_convert = []
+framework_paths = []
+
 libraries.each { | name, libs |
 	f = Formula.factory(name)
 
@@ -30,13 +33,6 @@ libraries.each { | name, libs |
 		installer = FormulaInstaller.new(f)
 		installer.install
 	end
-}
-
-libs_to_convert = []
-framework_paths = []
-
-libraries.each { | name, libs |
-	f = Formula.factory(name)
 
 	libs.each { | lib |
 		libname = lib.gsub(/dylib$/, '').gsub(/[^A-Za-z]/, '')
@@ -57,13 +53,24 @@ libraries.each { | name, libs |
 	libs.each {|lib|
 		libname = lib.gsub(/dylib$/, '').gsub(/[^A-Za-z]/, '')
 		ohai "Frameworkerizing #{lib}"
+		
+		headers = []
+
+		Dir[f.include / '*'].each { |header_path|
+			if not File.file? header_path then 
+				headers << "#{header_path}"
+			end
+		}
+
+		headers << f.include if headers.length == 0
+
 		system "rtool",
 				"--framework_root=@executable_path/../Frameworks",
 				"--framework_name=#{libname}",
 				"--framework_version=#{f.version}",
 				"--library=#{(f.lib + lib).realpath}",
 				"--builddir=#{frameworks}",
-				"--headers=#{f.include}",
+				"--headers=#{headers.join(' ')}",
 				"--headers_no_root",
 				"#{rlinks}"
 	}
@@ -74,3 +81,10 @@ libpurple = Formula.factory "libpurple"
 Dir[libpurple.share / "locale" / "*"].each { | locale |
 	FileUtils.cp_r(locale, frameworks / "libpurple.subproj" / "libpurple.framework" / "Resources")
 }
+
+ohai "Fetching libpurple.h and Info.plist"
+
+curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/libpurple-full.h", "-o", frameworks / "libpurple.subproj" / "libpurple.framework" / "Headers" / "libpurple.h"
+curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/Libpurple-Info.plist", "-o", frameworks / "libpurple.subproj" / "libpurple.framework" / "Resources" / "Info.plist"
+
+ohai "Done!"
