@@ -8,7 +8,7 @@ class Rtool < Formula
 
   def install
     system "chmod +x rtool"
-    bin.install "rtool"
+    bin.install Dir['rtool']
   end
 
   def test
