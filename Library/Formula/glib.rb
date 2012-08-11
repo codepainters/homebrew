@@ -2,16 +2,14 @@ require 'formula'
 
 class Glib < Formula
   homepage 'http://developer.gnome.org/glib/'
-  url 'ftp://ftp.gnome.org/pub/gnome/sources/glib/2.32/glib-2.32.4.tar.xz'
-  sha256 'a5d742a4fda22fb6975a8c0cfcd2499dd1c809b8afd4ef709bda4d11b167fae2'
+  url 'ftp://ftp.gnome.org/pub/gnome/sources/glib/2.20/glib-2.20.5.tar.bz2'
+  sha256 '88f092769df5ce9f784c1068a3055ede00ada503317653984101d5393de63655'
 
   option :universal
   option 'test', 'Build a debug build and run tests. NOTE: Not all tests succeed yet'
 
   depends_on 'pkg-config' => :build
-  depends_on 'xz' => :build
   depends_on 'gettext'
-  depends_on 'libffi'
 
   fails_with :llvm do
     build 2334
@@ -19,18 +17,13 @@ class Glib < Formula
   end
 
   def patches
-    # https://bugzilla.gnome.org/show_bug.cgi?id=673047  Still open at 2.32.3
-    # https://bugzilla.gnome.org/show_bug.cgi?id=644473  Still open at 2.32.3
-    # https://bugzilla.gnome.org/show_bug.cgi?id=673135  Resolved as wontfix.
-    p = { :p1 => %W[
-        https://raw.github.com/gist/2235195/19cdaebdff7dcc94ccd9b3747d43a09318f0b846/glib-gunicollate.diff
-        https://raw.github.com/gist/2235202/26f885e079e4d61da26d239970301b818ddbb4ab/glib-gtimezone.diff
-        https://raw.github.com/gist/2246469/591586214960f7647b1454e7d547c3935988a0a7/glib-configurable-paths.diff
-      ]}
-    p[:p0] = %W[
-        https://trac.macports.org/export/95596/trunk/dports/devel/glib2/files/patch-configure.diff
-      ] if build.universal?
-    p
+    mp = "http://hg.adium.im/adium/raw-file/tip/Dependencies/patches/"
+    {
+      :p0 => [
+        mp+"glib-gconvert.c.diff",
+        mp+"glib-Makefile.in.diff"
+      ]
+    }
   end
 
   def install
@@ -39,6 +32,11 @@ class Glib < Formula
     # -w is said to causes gcc to emit spurious errors for this package
     ENV.enable_warnings if ENV.compiler == :gcc
 
+    ENV.macosxsdk "10.8"
+    ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
+    ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
+    ENV.append_to_cflags("-mmacosx-version-min=10.6")
+
     # Disable dtrace; see https://trac.macports.org/ticket/30413
     args = %W[
       --disable-maintainer-mode
@@ -46,6 +44,13 @@ class Glib < Formula
       --disable-dtrace
       --prefix=#{prefix}
       --localstatedir=#{var}
+      --disable-static
+      --enable-shared
+      --with-libiconv=native
+      --disable-fam
+      --disable-selinux
+      --with-threads=posix
+      --disable-visibility
     ]
 
     system "./configure", *args
@@ -71,8 +76,6 @@ class Glib < Formula
       s.gsub! 'Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include',
               "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext.include}"
     end
-
-    (share+'gtk-doc').rmtree
   end
 
   def test

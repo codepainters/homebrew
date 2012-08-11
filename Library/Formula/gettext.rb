@@ -32,6 +32,11 @@ class Gettext < Formula
     ENV.libxml2
     ENV.universal_binary if build.universal?
 
+    ENV.macosxsdk "10.8"
+    ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
+    ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
+    ENV.append_to_cflags("-mmacosx-version-min=10.6")
+
     system "./configure", "--disable-dependency-tracking", "--disable-debug",
                           "--prefix=#{prefix}",
                           "--without-included-gettext",

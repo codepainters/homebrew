@@ -12,6 +12,11 @@ class Intltool < Formula
   depends_on 'XML::Parser' => :perl
 
   def install
+    ENV.macosxsdk "10.8"
+    ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
+    ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
+    ENV.append_to_cflags("-mmacosx-version-min=10.6")
+    
     system "./configure", "--prefix=#{prefix}"
     system "make install"
   end
