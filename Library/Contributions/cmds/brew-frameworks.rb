@@ -10,6 +10,7 @@ if not f.installed? then
 	ohai "Installing rtool first"
 	installer = FormulaInstaller.new(f)
 	installer.install
+	installer.finish
 end
 
 frameworks = HOMEBREW_PREFIX+"Frameworks"
@@ -32,6 +33,7 @@ libraries.each { | name, libs |
 		ohai "Installing #{name} first"
 		installer = FormulaInstaller.new(f)
 		installer.install
+		installer.finish
 	end
 
 	libs.each { | lib |
