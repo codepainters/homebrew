@@ -3,6 +3,7 @@ require 'formula'
 class Libpurple < Formula
   head 'http://hg.adium.im/libpurple/', :using => :hg
   url 'http://hg.adium.im/libpurple/archive/15f40873cec2.tar.gz'
+  sha1 'db2d49d849e72a17e4bc328124e36bbc84a64636'
   homepage 'http://pidgin.im/'
   version '2.10.5devel'
 
