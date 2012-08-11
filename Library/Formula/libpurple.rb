@@ -2,7 +2,9 @@ require 'formula'
 
 class Libpurple < Formula
   head 'http://hg.adium.im/libpurple/', :using => :hg
+  url 'http://hg.adium.im/libpurple/archive/15f40873cec2.tar.gz'
   homepage 'http://pidgin.im/'
+  version '2.10.5devel'
 
   option :universal
 
@@ -10,6 +12,7 @@ class Libpurple < Formula
   depends_on 'libtool' => :build
   depends_on 'autoconf' => :build
   depends_on 'automake' => :build
+  depends_on 'mercurial' => :build
   depends_on 'gettext'
   depends_on 'glib'
   depends_on 'intltool'
