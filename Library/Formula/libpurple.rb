@@ -19,10 +19,16 @@ class Libpurple < Formula
   depends_on 'intltool'
   depends_on 'meanwhile'
 
+
+  def options
+    [["--debug", "Build with debugging symbols."]]
+  end
+
   def install
     ENV.universal_binary if build.universal?
 
-    ENV.append_to_cflags(" -DHAVE_SSL -DHAVE_OPENSSL -fno-common -DHAVE_ZLIB")
+    ENV.append_to_cflags(" -DHAVE_SSL -DHAVE_OPENSSL -fno-common -DHAVE_ZLIB -fstack-protector")
+    ENV.append_to_cflags(" -g") if ARGV.include? '--debug'
     ENV['LDFLAGS'] += " -lsasl2 -lz"
 
     ENV.macosxsdk "10.8"
@@ -30,12 +36,13 @@ class Libpurple < Formula
     ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
     ENV.append_to_cflags("-mmacosx-version-min=10.6")
 
+    ohai "CFLAGS: #{ENV['CFLAGS']}"
+
     args = %W[
         --disable-dependency-tracking
         --disable-gtkui
         --disable-consoleui
         --disable-perl
-        --enable-debug
         --disable-static
         --enable-shared
         --enable-cyrus-sasl
@@ -51,6 +58,14 @@ class Libpurple < Formula
         --disable-debug
         --prefix=#{prefix}
     ]
+
+    if ARGV.include? '--debug' then
+      ohai "Debug symbols are on"
+      args << "--enable-debug"
+    else
+      ohai "Debug symbols are off"
+      args << "--disable-debug"
+    end
 
     system "./autogen.sh", *args
 
