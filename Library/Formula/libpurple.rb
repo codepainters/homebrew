@@ -2,10 +2,10 @@ require 'formula'
 
 class Libpurple < Formula
   head 'http://hg.adium.im/libpurple/', :using => :hg
-  url 'http://hg.adium.im/libpurple/archive/15f40873cec2.tar.gz'
-  sha1 'db2d49d849e72a17e4bc328124e36bbc84a64636'
+  url 'https://bitbucket.org/xnyhps/pidgin/get/bbf9fd2a4599.tar.bz2'
+  # sha1 'db2d49d849e72a17e4bc328124e36bbc84a64636'
   homepage 'http://pidgin.im/'
-  version '2.10.5devel'
+  version '2.10.5rbbf9fd2a4599'
 
   option :universal
 
@@ -13,7 +13,6 @@ class Libpurple < Formula
   depends_on 'libtool' => :build
   depends_on 'autoconf' => :build
   depends_on 'automake' => :build
-  depends_on 'mercurial' => :build
   depends_on 'gettext'
   depends_on 'glib'
   depends_on 'intltool'
@@ -68,20 +67,18 @@ class Libpurple < Formula
     end
 
     system "./autogen.sh", *args
-
-    system "make install"
-
+    
     ohai "Updating po files"
 
     Dir.chdir "po"
 
     system "make update-po"
-    system "make all"
+
+    Dir.chdir ".."
+
     system "make install"
 
     ohai "Adding libpurple internal headers"
-
-    Dir.chdir ".."
 
     internals = ["libpurple/protocols/oscar/oscar.h",
       "libpurple/protocols/oscar/snactypes.h",

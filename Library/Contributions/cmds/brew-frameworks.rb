@@ -4,16 +4,11 @@
 require 'extend/pathname'
 require 'formula_installer'
 
-f = Formula.factory("rtool")
+frameworks = HOMEBREW_PREFIX/"Frameworks"
 
-if not f.installed? then
-	ohai "Installing rtool first"
-	installer = FormulaInstaller.new(f)
-	installer.install
-	installer.finish
-end
-
-frameworks = HOMEBREW_PREFIX+"Frameworks"
+Dir[frameworks].each {|fr|
+	FileUtils.rm_r fr
+}
 
 frameworks.mkpath
 
@@ -33,6 +28,12 @@ libraries.each { | name, libs |
 	f = Formula.factory(name)
 
 	if not f.installed? then
+		linked_keg_ref = HOMEBREW_PREFIX/"Library/LinkedKegs"/name
+
+		if linked_keg_ref.symlink?
+			Keg.new(linked_keg_ref.realpath).unlink
+		end
+		
 		ohai "Installing #{name} first"
 		installer = FormulaInstaller.new(f)
 		installer.install
@@ -42,7 +43,7 @@ libraries.each { | name, libs |
 	libs.each { | lib |
 		libname = lib.gsub(/dylib$/, '').gsub(/[^A-Za-z]/, '')
 		cellar_path = (f.lib + lib).realpath
-		prefix_path = HOMEBREW_PREFIX+"lib"+lib
+		prefix_path = HOMEBREW_PREFIX/"lib"/lib
 		executable_path = "@executable_path/../Frameworks/" + libname + ".framework/Versions/" + f.version + "/" + libname
 
 		libs_to_convert << cellar_path << prefix_path
@@ -74,7 +75,7 @@ libraries.each { | name, libs |
 
 		headers << f.include if headers.length == 0
 
-		system "rtool",
+		system HOMEBREW_PREFIX/"../rtool/rtool",
 				"--framework_root=@executable_path/../Frameworks",
 				"--framework_name=#{libname}",
 				"--framework_version=#{f.version}",
@@ -92,12 +93,12 @@ Dir[libpurple.share / "locale" / "*"].each { | locale |
 	FileUtils.cp_r(locale, frameworks / "libpurple.subproj" / "libpurple.framework" / "Resources")
 }
 
-ohai "Fetching libpurple.h and Info.plist"
+ohai "Adding libpurple.h and Info.plist"
 
-curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/libpurple-full.h", "-o", frameworks / "libpurple.subproj" / "libpurple.framework" / "Headers" / "libpurple.h"
-curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/Libpurple-Info.plist", "-o", frameworks / "libpurple.subproj" / "libpurple.framework" / "Resources" / "Info.plist"
+FileUtils.cp HOMEBREW_PREFIX/"../libpurple-full.h", frameworks / "libpurple.subproj/libpurple.framework/Headers/libpurple.h"
+FileUtils.cp HOMEBREW_PREFIX/"../Libpurple-Info.plist", frameworks / "libpurple.subproj/libpurple.framework/Resources/Info.plist"
 
 
-curl "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/Libotr-Info.plist", "-o", frameworks / "libotr.subproj" / "libotr.framework" / "Resources" / "Info.plist"
+FileUtils.cp HOMEBREW_PREFIX/"../Libotr-Info.plist", frameworks / "libotr.subproj/libotr.framework/Resources/Info.plist"
 
 ohai "Done!"
