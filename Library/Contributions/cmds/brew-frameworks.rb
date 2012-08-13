@@ -26,19 +26,24 @@ framework_paths = []
 
 libraries.each { | name, libs |
 	f = Formula.factory(name)
+	cellar = f.prefix.parent
 
-	if not f.installed? then
-		linked_keg_ref = HOMEBREW_PREFIX/"Library/LinkedKegs"/name
-
-		if linked_keg_ref.symlink?
-			Keg.new(linked_keg_ref.realpath).unlink
-		end
-		
-		ohai "Installing #{name} first"
+	if not cellar.directory? or not f.installed? then
+		ohai "Installing #{name} #{f.version}first"
 		installer = FormulaInstaller.new(f)
 		installer.install
 		installer.finish
 	end
+
+	ohai "Linking version #{f.version} of #{name}"
+
+	cellar.children.select {|pn| pn.directory? }.each {|v|
+		keg = Keg.new(v)
+		keg.unlink
+	}
+
+	keg = Keg.new(cellar+f.version)
+	keg.link
 
 	libs.each { | lib |
 		libname = lib.gsub(/dylib$/, '').gsub(/[^A-Za-z]/, '')
