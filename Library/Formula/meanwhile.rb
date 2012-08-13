@@ -11,7 +11,7 @@ class Meanwhile < Formula
   depends_on 'glib'
 
   def patches
-    mp = "http://hg.adium.im/adium/raw-file/c346a138fd5a/Dependencies/patches/"
+    mp = "../patches"
     {
       :p0 => [
         mp+"Meanwhile-srvc_ft.c.diff",

@@ -29,7 +29,7 @@ libraries.each { | name, libs |
 	cellar = f.prefix.parent
 
 	if not cellar.directory? or not f.installed? then
-		ohai "Installing #{name} #{f.version}first"
+		ohai "Installing #{name} #{f.version} first"
 		installer = FormulaInstaller.new(f)
 		installer.install
 		installer.finish
