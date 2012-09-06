@@ -26,7 +26,7 @@ class Libpurple < Formula
   def install
     ENV.universal_binary if build.universal?
 
-    ENV.append_to_cflags(" -DHAVE_SSL -DHAVE_OPENSSL -fno-common -DHAVE_ZLIB -fstack-protector")
+    ENV.append_to_cflags(" -DHAVE_SSL -DHAVE_OPENSSL -fno-common -DHAVE_ZLIB")
     ENV.append_to_cflags(" -g") if ARGV.include? '--debug'
     ENV['LDFLAGS'] += " -lsasl2 -lz"
 
@@ -34,6 +34,9 @@ class Libpurple < Formula
     ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
     ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
     ENV.append_to_cflags("-mmacosx-version-min=10.6")
+
+    ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
+    ENV.append_to_cflags("-fstack-protector-all")
 
     ohai "CFLAGS: #{ENV['CFLAGS']}"
 

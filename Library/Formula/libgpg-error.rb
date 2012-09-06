@@ -13,6 +13,9 @@ class LibgpgError < Formula
     ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
     ENV.append_to_cflags("-mmacosx-version-min=10.6")
 
+    ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
+    ENV.append_to_cflags("-fstack-protector-all")
+
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}"
     system "make install"

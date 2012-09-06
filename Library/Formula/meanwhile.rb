@@ -11,7 +11,7 @@ class Meanwhile < Formula
   depends_on 'glib'
 
   def patches
-    mp = "../patches"
+    mp = HOMEBREW_PREFIX/"../patches/"
     {
       :p0 => [
         mp+"Meanwhile-srvc_ft.c.diff",
@@ -30,6 +30,9 @@ class Meanwhile < Formula
     ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
     ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
     ENV.append_to_cflags("-mmacosx-version-min=10.6")
+
+    ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
+    ENV.append_to_cflags("-fstack-protector-all")
 
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
                           "--prefix=#{prefix}", "--disable-doxygen",
