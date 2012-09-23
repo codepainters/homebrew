@@ -17,7 +17,8 @@ class Meanwhile < Formula
         mp+"Meanwhile-srvc_ft.c.diff",
         mp+"Meanwhile-common.c.diff",
         mp+"Meanwhile-st_list.c.diff",
-        mp+"Meanwhile-ltmain.sh.diff"
+        mp+"Meanwhile-ltmain.sh.diff",
+        mp+"Meanwhile-session.c.diff"
       ]
     }
   end
