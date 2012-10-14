@@ -9,7 +9,9 @@ class Glib < Formula
   option 'test', 'Build a debug build and run tests. NOTE: Not all tests succeed yet'
 
   depends_on 'pkg-config' => :build
+  depends_on 'xz' => :build
   depends_on 'gettext'
+  depends_on 'libffi'
 
   fails_with :llvm do
     build 2334
@@ -17,13 +19,18 @@ class Glib < Formula
   end
 
   def patches
-    mp = HOMEBREW_PREFIX/"../patches/"
-    {
-      :p0 => [
-        mp+"glib-gconvert.c.diff",
-        mp+"glib-Makefile.in.diff"
-      ]
-    }
+    # https://bugzilla.gnome.org/show_bug.cgi?id=673047  Still open at 2.32.3
+    # https://bugzilla.gnome.org/show_bug.cgi?id=644473  Still open at 2.32.3
+    # https://bugzilla.gnome.org/show_bug.cgi?id=673135  Resolved as wontfix.
+    p = { :p1 => %W[
+        https://raw.github.com/gist/2235195/19cdaebdff7dcc94ccd9b3747d43a09318f0b846/glib-gunicollate.diff
+        https://raw.github.com/gist/2235202/26f885e079e4d61da26d239970301b818ddbb4ab/glib-gtimezone.diff
+        https://raw.github.com/gist/2246469/591586214960f7647b1454e7d547c3935988a0a7/glib-configurable-paths.diff
+      ]}
+    p[:p0] = %W[
+        https://trac.macports.org/export/95596/trunk/dports/devel/glib2/files/patch-configure.diff
+      ] if build.universal?
+    p
   end
 
   def install
@@ -36,7 +43,7 @@ class Glib < Formula
     ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
     ENV['MACOSX_DEPLOYMENT_TARGET'] = "10.6"
     ENV.append_to_cflags("-mmacosx-version-min=10.6")
-
+ 
     ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
     ENV.append_to_cflags("-fstack-protector-all")
 
@@ -79,6 +86,8 @@ class Glib < Formula
       s.gsub! 'Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include',
               "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext.include}"
     end
+
+    (share+'gtk-doc').rmtree
   end
 
   def test
