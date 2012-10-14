@@ -108,6 +108,7 @@ class << ENV
     paths += all_deps.map{|dep| "#{HOMEBREW_PREFIX}/opt/#{dep}/bin" }
     paths << "#{HOMEBREW_PREFIX}/opt/python/bin" if brewed_python?
     paths << "#{MacSystem.x11_prefix}/bin" if x11?
+    paths << "#{HOMEBREW_PREFIX}/bin"
     paths += %w{/usr/bin /bin /usr/sbin /sbin}
     paths.to_path_s
   end
