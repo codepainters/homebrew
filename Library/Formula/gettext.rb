@@ -4,12 +4,14 @@ class Gettext < Formula
   homepage 'http://www.gnu.org/software/gettext/'
   url 'http://ftpmirror.gnu.org/gettext/gettext-0.18.1.1.tar.gz'
   mirror 'http://ftp.gnu.org/gnu/gettext/gettext-0.18.1.1.tar.gz'
-  md5 '3dd55b952826d2b32f51308f2f91aa89'
+  sha1 '5009deb02f67fc3c59c8ce6b82408d1d35d4e38f'
 
   keg_only "OS X provides the BSD gettext library and some software gets confused if both are in the library path."
 
   bottle do
+    sha1 'd1ad5ad15bfe8fe813ee37e5d6b514fc79924b9a' => :mountainlion
     sha1 'c75fdb192f1b49c9e7e2039c66e24f60f26bc027' => :lion
+    sha1 'b8958544542fc160b4c74db5d83cb441d12741c7' => :snowleopard
   end
 
   option :universal

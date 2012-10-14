@@ -27,23 +27,30 @@ class Keg < Pathname
   end
 
   def unlink
-    n=0
+    # these are used by the ObserverPathnameExtension to count the number
+    # of files and directories linked
+    $n=$d=0
 
     %w[bin etc lib include sbin share var].map{ |d| self/d }.each do |src|
       next unless src.exist?
       src.find do |src|
         next if src == self
         dst=HOMEBREW_PREFIX+src.relative_path_from(self)
-        next unless dst.symlink?
+        dst.extend ObserverPathnameExtension
+
+        # check whether the file to be unlinked is from the current keg first
+        if !dst.symlink? || !dst.exist? || src != dst.resolved_path
+          next
+        end
+
         dst.uninstall_info if dst.to_s =~ INFOFILE_RX and ENV['HOMEBREW_KEEP_INFO']
         dst.unlink
         dst.parent.rmdir_if_possible
-        n+=1
         Find.prune if src.directory?
       end
     end
-    linked_keg_record.unlink if linked_keg_record.exist?
-    n
+    linked_keg_record.unlink if linked_keg_record.symlink?
+    $n+$d
   end
 
   def fname
@@ -65,6 +72,15 @@ class Keg < Pathname
       end
     return if dir.nil?
     dir.directory? and not dir.children.length.zero?
+  end
+
+  def version
+    require 'version'
+    Version.new(basename.to_s)
+  end
+
+  def basename
+    Pathname.new(self.to_s).basename
   end
 
   def link mode=nil
@@ -117,7 +133,25 @@ class Keg < Pathname
 
     linked_keg_record.make_relative_symlink(self) unless mode == :dryrun
 
+    optlink unless mode == :dryrun
+
     return $n + $d
+  rescue Exception
+    opoo "Could not link #{fname}. Unlinking..."
+    unlink
+    raise
+  end
+
+  def optlink
+    from = HOMEBREW_PREFIX/:opt/fname
+    if from.symlink?
+      from.delete
+    elsif from.directory?
+      from.rmdir
+    elsif from.exist?
+      from.delete
+    end
+    from.make_relative_symlink(self)
   end
 
 protected

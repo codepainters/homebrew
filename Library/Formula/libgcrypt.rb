@@ -14,13 +14,14 @@ class Libgcrypt < Formula
     end
   end
 
-  def install
-    ENV.universal_binary # build fat so wine can use it
+  def cflags
+    cflags = ENV.cflags.to_s
+    cflags += ' -std=gnu89 -fheinous-gnu-extensions' if ENV.compiler == :clang
+    cflags
+  end
 
-    if ENV.compiler == :clang
-      ENV.append 'CFLAGS', '-std=gnu89'
-      ENV.append 'CFLAGS', '-fheinous-gnu-extensions'
-    end
+  def install
+    ENV.universal_binary
 
     ENV.macosxsdk "10.8"
     ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)
@@ -35,7 +36,7 @@ class Libgcrypt < Formula
                           "--disable-asm",
                           "--with-gpg-error-prefix=#{HOMEBREW_PREFIX}"
     # Parallel builds work, but only when run as separate steps
-    system "make"
+    system "make", "CFLAGS=#{cflags}"
     system "make check"
     system "make install"
   end

@@ -1,5 +1,3 @@
-require 'set'
-
 ## This file defines dependencies and requirements.
 ##
 ## A dependency is a formula that another formula needs to install.
@@ -65,13 +63,15 @@ private
       # Xcode no longer provides autotools or some other build tools
       Dependency.new(spec.to_s) unless MacOS::Xcode.provides_autotools?
     when :libpng, :freetype, :pixman, :fontconfig, :cairo
-      if MacOS.lion_or_newer?
-        MacOS::XQuartz.installed? ? X11Dependency.new(tag) : Dependency.new(spec.to_s)
+      if MacOS.version >= :mountain_lion
+        Dependency.new(spec.to_s)
       else
         X11Dependency.new(tag)
       end
     when :x11
       X11Dependency.new(tag)
+    when :xcode
+      XCodeDependency.new
     else
       raise "Unsupported special dependency #{spec}"
     end
@@ -139,7 +139,7 @@ class Requirement
   end
 
   def hash
-    @message.hash
+    message.hash
   end
 end
 
@@ -185,7 +185,7 @@ class LanguageModuleDependency < Requirement
       when :lua     then "luarocks install"
       when :node    then "npm install"
       when :perl    then "cpan -i"
-      when :python  then "easy_install"
+      when :python  then "pip install"
       when :rbx     then "rbx gem install"
       when :ruby    then "gem install"
     end
@@ -196,7 +196,6 @@ end
 # This requirement is used to require an X11 implementation,
 # optionally with a minimum version number.
 class X11Dependency < Requirement
-
   def initialize min_version=nil
     @min_version = min_version
   end
@@ -209,7 +208,7 @@ class X11Dependency < Requirement
 
   def message; <<-EOS.undent
     Unsatisfied dependency: XQuartz #{@min_version}
-    Please install the latest version of XQuartz:
+    Homebrew does not package XQuartz. Installers may be found at:
       https://xquartz.macosforge.org
     EOS
   end
@@ -218,6 +217,9 @@ class X11Dependency < Requirement
     ENV.x11
   end
 
+  def hash
+    "X11".hash
+  end
 end
 
 
@@ -320,5 +322,19 @@ class ConflictRequirement < Requirement
   # The user can chose to force installation even in the face of conflicts.
   def fatal?
     not ARGV.force?
+  end
+end
+
+class XCodeDependency < Requirement
+  def fatal?; true; end
+
+  def satisfied?
+    MacOS::Xcode.installed?
+  end
+
+  def message; <<-EOS.undent
+    A full installation of XCode.app is required to compile this software.
+    Installing just the Command Line Tools is not sufficent.
+    EOS
   end
 end
