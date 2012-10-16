@@ -2,10 +2,10 @@ require 'formula'
 
 class Libpurple < Formula
   head 'http://hg.adium.im/libpurple/', :using => :hg
-  url 'https://bitbucket.org/xnyhps/pidgin/get/bbf9fd2a4599.tar.bz2'
+  url 'http://hg.adium.im/libpurple/archive/590f15aee045.tar.gz'
   # sha1 'db2d49d849e72a17e4bc328124e36bbc84a64636'
   homepage 'http://pidgin.im/'
-  version '2.10.5rbbf9fd2a4599'
+  version '2.10.5r590f15aee045'
 
   option :universal
 
