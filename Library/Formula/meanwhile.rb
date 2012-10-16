@@ -20,6 +20,9 @@ class Meanwhile < Formula
         mp+"Meanwhile-ltmain.sh.diff",
         mp+"Meanwhile-srvc_place.c.diff",
         mp+"Meanwhile-session.c.diff"
+      ],
+      :p1 => [
+        mp+"Meanwhile-glib_headers.diff"
       ]
     }
   end
