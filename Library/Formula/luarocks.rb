@@ -55,11 +55,10 @@ end
 # so we just return true. Naughty, but I don't know LUA and don't want to
 # write a better patch.
 __END__
-diff --git a/src/luarocks/fs/lua.lua b/src/luarocks/fs/lua.lua
-index 67c3ce0..2d149c7 100644
---- a/src/luarocks/fs/lua.lua
-+++ b/src/luarocks/fs/lua.lua
-@@ -669,29 +669,5 @@ end
+diff -ur a/src/luarocks/fs/lua.lua b/src/luarocks/fs/lua.lua
+--- a/src/luarocks/fs/lua.lua 2012-11-05 00:59:27.000000000 +0100
++++ b/src/luarocks/fs/lua.lua 2012-11-09 12:45:37.000000000 +0100
+@@ -669,29 +669,5 @@
  -- @return boolean or (boolean, string): true on success, false on failure,
  -- plus an error message.
  function check_command_permissions(flags)
