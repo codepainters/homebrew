@@ -9,12 +9,13 @@ end
 
 class R < Formula
   homepage 'http://www.r-project.org'
-  url 'http://cran.r-project.org/src/base/R-2/R-2.15.1.tar.gz'
-  sha1 'f0e6912be6dfc0d1fdc4be66048304d8befe8424'
+  url 'http://cran.r-project.org/src/base/R-2/R-2.15.3.tar.gz'
+  sha1 'a05b68f31b00d8038d9f0a8562cfc0c8e32d9621'
 
   head 'https://svn.r-project.org/R/trunk'
 
   option 'with-valgrind', 'Compile an unoptimized build with support for the Valgrind debugger'
+  option 'test', 'Run tests before installing'
 
   depends_on 'readline'
   depends_on 'libtiff'
@@ -41,6 +42,7 @@ class R < Formula
     system "./configure", *args
     system "make"
     ENV.j1 # Serialized installs, please
+    system "make check 2>&1 | tee make-check.log" if build.include? 'test'
     system "make install"
 
     # Link binaries and manpages from the Framework
@@ -56,15 +58,17 @@ class R < Formula
     bash_dir = prefix + 'etc/bash_completion.d'
     bash_dir.mkpath
     RBashCompletion.new.brew { bash_dir.install 'R' }
+
+    prefix.install 'make-check.log' if build.include? 'test'
   end
 
   def caveats; <<-EOS.undent
     R.framework was installed to:
-      #{prefix}/R.framework
+      #{opt_prefix}/R.framework
 
     To use this Framework with IDEs such as RStudio, it must be linked
     to the standard OS X location:
-      sudo ln -s "#{prefix}/R.framework" /Library/Frameworks
+      sudo ln -s "#{opt_prefix}/R.framework" /Library/Frameworks
 
     To enable rJava support, run the following command:
       R CMD javareconf JAVA_CPPFLAGS=-I/System/Library/Frameworks/JavaVM.framework/Headers

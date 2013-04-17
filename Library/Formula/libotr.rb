@@ -18,7 +18,9 @@ class Libotr < Formula
     ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
     ENV.append_to_cflags("-fstack-protector-all")
     
-    system "./configure", "--prefix=#{prefix}", "--disable-debug", "--disable-dependency-tracking", "--mandir=#{man}"
+    system "./configure", "--disable-debug", "--disable-dependency-tracking",
+                          "--prefix=#{prefix}",
+                          "--mandir=#{man}"
     system "make install"
   end
 end

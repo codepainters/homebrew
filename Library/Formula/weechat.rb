@@ -2,15 +2,16 @@ require 'formula'
 
 class Weechat < Formula
   homepage 'http://www.weechat.org'
-  url 'http://www.weechat.org/files/src/weechat-0.3.9.tar.bz2'
-  sha1 'c01025ebf2c02740c3d3842a9ea4b2cb74311161'
+  url 'http://www.weechat.net/files/src/weechat-0.4.0.tar.bz2'
+  sha1 'e4b891d9d3d68196f97d226f487c4a2382d59d99'
 
   depends_on 'cmake' => :build
   depends_on 'gettext'
   depends_on 'gnutls'
-  depends_on 'guile'  => :optional if build.include? 'guile'
-  depends_on 'aspell' => :optional if build.include? 'aspell'
-  depends_on 'lua'    => :optional if build.include? 'lua'
+  depends_on 'libgcrypt'
+  depends_on 'guile' if build.include? 'guile'
+  depends_on 'aspell' if build.include? 'aspell'
+  depends_on 'lua' if build.include? 'lua'
 
   option 'lua', 'Build the lua module'
   option 'perl', 'Build the perl module'
@@ -51,10 +52,12 @@ class Weechat < Formula
     args << '-DENABLE_ASPELL=OFF' unless build.include? 'aspell'
     args << '-DENABLE_GUILE=OFF'  unless build.include? 'guile' and \
                                          Formula.factory('guile').linked_keg.exist?
-    args << '.'
+    args << '..'
 
-    system 'cmake', *args
-    system 'make install'
+    mkdir 'build' do
+      system 'cmake', *args
+      system 'make install'
+    end
   end
 
   def caveats; <<-EOS.undent
