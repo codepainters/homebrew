@@ -8,7 +8,7 @@ class Libotr < Formula
   depends_on 'libgcrypt'
 
   def install
-    ENV.universal_binary if build.universal?
+    ENV.universal_binary
 
     ENV.macosxsdk "10.8"
     ENV.remove_from_cflags(/ ?-mmacosx-version-min=10\.\d/)

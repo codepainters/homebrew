@@ -18,7 +18,8 @@ libraries = { "libpurple" => ["libpurple.0.dylib"],
 	          "gettext" => ["libintl.8.dylib"],
 	          "libgcrypt" => ["libgcrypt.11.dylib"],
 	          "libgpg-error" => ["libgpg-error.0.dylib"],
-	          "libotr" => ["libotr.dylib"]
+	          "libotr" => ["libotr.dylib"],
+	          "libidn" => ["libidn.11.dylib"]
 			}
 
 libs_to_convert = []
