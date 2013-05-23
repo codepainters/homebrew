@@ -1,10 +1,10 @@
 require 'formula'
 
 class Libpurple < Formula
-  libpurple_hg_revision = "c8e809dffa1d"
+  libpurple_hg_revision = "1836d0d921db"
   head 'http://hg.adium.im/libpurple/', :using => :hg
   url "http://hg.adium.im/libpurple/archive/#{libpurple_hg_revision}.tar.gz"
-  # sha1 'db2d49d849e72a17e4bc328124e36bbc84a64636'
+  sha1 'c418a9b2918f097c4a79924e405df440fee9a09d'
   homepage 'http://pidgin.im/'
   version "2.10.7r#{libpurple_hg_revision}"
 
