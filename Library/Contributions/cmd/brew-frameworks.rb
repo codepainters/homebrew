@@ -12,20 +12,22 @@ Dir[frameworks].each {|fr|
 
 frameworks.mkpath
 
-libraries = { "libpurple" => ["libpurple.0.dylib"],
-	          "glib" => ["libglib-2.0.0.dylib", "libgmodule-2.0.0.dylib", "libgobject-2.0.0.dylib", "libgthread-2.0.0.dylib"],
-	          "meanwhile" => ["libmeanwhile.1.0.2.dylib"],
-	          "gettext" => ["libintl.8.dylib"],
-	          "libgcrypt" => ["libgcrypt.11.dylib"],
-	          "libgpg-error" => ["libgpg-error.0.dylib"],
-	          "libotr" => ["libotr.dylib"],
-	          "libidn" => ["libidn.11.dylib"]
-			}
+libraries = [ { "name" => "gettext", "libs" => ["libintl.8.dylib"] },
+			  { "name" => "glib", "libs" => ["libglib-2.0.0.dylib", "libgmodule-2.0.0.dylib", "libgobject-2.0.0.dylib", "libgthread-2.0.0.dylib"] },
+	          { "name" => "meanwhile", "libs" => ["libmeanwhile.1.0.2.dylib"] },
+	          { "name" => "libgcrypt", "libs" => ["libgcrypt.11.dylib"] },
+	          { "name" => "libgpg-error", "libs" => ["libgpg-error.0.dylib"] },
+	          { "name" => "libotr", "libs" => ["libotr.dylib"] },
+	          { "name" => "libidn", "libs" => ["libidn.11.dylib"] },
+	          { "name" => "libpurple", "libs" => ["libpurple.0.dylib"] }
+			]
 
 libs_to_convert = []
 framework_paths = []
 
-libraries.each { | name, libs |
+libraries.each { | l |
+	name = l["name"]
+	libs = l["libs"]
 	f = Formula.factory(name)
 	cellar = f.prefix.parent
 
@@ -60,7 +62,9 @@ libraries.each { | name, libs |
 
 rlinks = "--rlinks_framework=[" + libs_to_convert.join(" ") + "]:[" + framework_paths.join(" ") + "]"
 
-libraries.each { | name, libs |
+libraries.each { | l |
+	name = l["name"]
+	libs = l["libs"]
 	f = Formula.factory(name)
 
 	libs.each {|lib|
