@@ -19,10 +19,7 @@ class Gettext < Formula
   option 'with-examples', 'Keep example files'
 
   def patches
-    # Patch to allow building with Xcode 4; safe for any compiler.
-    p = {:p0 => ['https://trac.macports.org/export/79617/trunk/dports/devel/gettext/files/stpncpy.patch',
-                 HOMEBREW_PREFIX/"../patches/gettext-Makefile.in.diff",
-                 'https://trac.macports.org/export/102008/trunk/dports/devel/gettext/files/patch-gettext-tools-Makefile.in']}
+    p = {:p0 => ['https://trac.macports.org/export/102008/trunk/dports/devel/gettext/files/patch-gettext-tools-Makefile.in']}
   end
 
   def install
