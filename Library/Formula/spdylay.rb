@@ -2,8 +2,8 @@ require 'formula'
 
 class Spdylay < Formula
   homepage 'https://github.com/tatsuhiro-t/spdylay'
-  url 'https://github.com/tatsuhiro-t/spdylay/archive/release-0.3.7.tar.gz'
-  sha1 'fbabca6aa53d51208ca60e5d104e402f072722e4'
+  url 'https://github.com/tatsuhiro-t/spdylay/archive/release-1.0.0.tar.gz'
+  sha1 'd51e5f320c0418f89050802c07e573812c38abcf'
 
   depends_on 'autoconf' => :build
   depends_on 'automake' => :build
@@ -20,7 +20,7 @@ class Spdylay < Formula
     ENV['ZLIB_CFLAGS'] = '-I/usr/include'
     ENV['ZLIB_LIBS'] = '-L/usr/lib -lz'
 
-    system "./configure", "--disable-debug", "--disable-dependency-tracking",
+    system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}"
     system "make install"
   end

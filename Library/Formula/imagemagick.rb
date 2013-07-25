@@ -6,15 +6,22 @@ class Imagemagick < Formula
   # upstream's stable tarballs tend to disappear, so we provide our own mirror
   # Tarball from: http://www.imagemagick.org/download/ImageMagick.tar.gz
   # SHA-256 from: http://www.imagemagick.org/download/digest.rdf
-  url 'http://downloads.sf.net/project/machomebrew/mirror/ImageMagick-6.8.0-10.tar.gz'
-  sha256 'b3dfcb44300f73e73ffa8deef8bba4cf43f03d7150bf1fd0febedceac1a45c7e'
+  url 'http://downloads.sf.net/project/machomebrew/mirror/ImageMagick-6.8.6-3.tar.bz2'
+  sha256 '63b9ff1dc7cf8e7776e95c8e834c819eff5b09592728b5cdd810539e7c69e0cd'
 
   head 'https://www.imagemagick.org/subversion/ImageMagick/trunk',
     :using => UnsafeSubversionDownloadStrategy
 
+  bottle do
+    sha1 'f4307ebd1fe094dbd14e4e19c717baa83bdd9631' => :snow_leopard
+    sha1 '45d35923b0439617adb86630bdd4985a6cf03984' => :lion
+    sha1 'a0eb40e1fbf29651949c9baa530c34e7bef769f4' => :mountain_lion
+  end
+
   option 'with-quantum-depth-8', 'Compile with a quantum depth of 8 bit'
   option 'with-quantum-depth-16', 'Compile with a quantum depth of 16 bit'
   option 'with-quantum-depth-32', 'Compile with a quantum depth of 32 bit'
+  option 'without-magick-plus-plus', 'disable build/install of Magick++'
 
   depends_on :libltdl
 
@@ -34,17 +41,17 @@ class Imagemagick < Formula
   depends_on 'liblqr' => :optional
   depends_on 'openexr' => :optional
   depends_on 'ghostscript' => :optional
+  depends_on 'webp' => :optional
 
   opoo '--with-ghostscript is not recommended' if build.with? 'ghostscript'
   if build.with? 'openmp' and (MacOS.version == 10.5 or ENV.compiler == :clang)
     opoo '--with-openmp is not supported on Leopard or with Clang'
   end
 
-  bottle do
-    revision 1
-    sha1 '8a1a49f25274e34d73c1c0af27424fa68006f34f' => :mountain_lion
-    sha1 'b0027bd4b4e6a82d3958eee18e5aaf3bffe1f4f1' => :lion
-    sha1 'b5b3ffb0c4bf9fe247b9fdeea789298c71904a12' => :snow_leopard
+  def pour_bottle?
+    # If libtool is keg-only it currently breaks the bottle.
+    # This is a temporary workaround until we have a better fix.
+    not Formula.factory('libtool').keg_only?
   end
 
   skip_clean :la
@@ -57,7 +64,6 @@ class Imagemagick < Formula
              "--enable-shared",
              "--disable-static",
              "--without-pango",
-             "--with-included-ltdl",
              "--with-modules"]
 
     args << "--disable-openmp" unless build.include? 'enable-openmp'
@@ -76,10 +82,11 @@ class Imagemagick < Formula
     end
 
     args << "--with-quantum-depth=#{quantum_depth}" if quantum_depth
-    args << "--with-rsvg" if build.with? 'rsvg'
+    args << "--with-rsvg" if build.with? 'librsvg'
     args << "--without-x" unless build.with? 'x11'
     args << "--with-fontconfig=yes" if build.with? 'fontconfig'
     args << "--with-freetype=yes" if build.with? 'freetype'
+    args << "--with-webp=yes" if build.include? 'webp'
 
     # versioned stuff in main tree is pointless for us
     inreplace 'configure', '${PACKAGE_NAME}-${PACKAGE_VERSION}', '${PACKAGE_NAME}'
@@ -88,7 +95,6 @@ class Imagemagick < Formula
   end
 
   test do
-    system "#{bin}/identify", \
-      "/System/Library/Frameworks/SecurityInterface.framework/Versions/A/Resources/Key_Large.png"
+    system "#{bin}/identify", "/usr/share/doc/cups/images/cups.png"
   end
 end

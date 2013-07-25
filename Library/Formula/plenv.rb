@@ -2,13 +2,16 @@ require 'formula'
 
 class Plenv < Formula
   homepage 'https://github.com/tokuhirom/plenv'
-  url 'https://github.com/tokuhirom/plenv/tarball/1.4.3'
-  sha1 '1911aef906343bfc66ecd92274de454e55fc0e9c'
+  url 'https://github.com/tokuhirom/plenv/archive/2.0.1.tar.gz'
+  sha1 '534e9048ff171fee2d47d2508f5af30b92b3107f'
 
   head 'https://github.com/tokuhirom/plenv.git'
 
   def install
-    prefix.install 'bin', 'share'
+    prefix.install 'bin', 'plenv.d', 'completions', 'libexec'
+
+    # Run rehash after installing.
+    system "#{bin}/plenv", "rehash"
   end
 
   def caveats; <<-EOS.undent

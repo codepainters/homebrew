@@ -2,10 +2,10 @@ require 'formula'
 
 class Inspircd < Formula
   homepage 'http://inspircd.github.com'
-  url 'https://github.com/inspircd/inspircd/archive/v2.0.10.tar.gz'
-  sha1 '9b88b9b58e3e765604c938d1c2ae2c2ab8403d24'
+  url 'https://github.com/inspircd/inspircd/archive/v2.0.13.tar.gz'
+  sha1 'c15c34c7605bd0d8d83a5b1d50111780973372c3'
 
-  head 'https://github.com/inspircd/inspircd.git', :branch => 'insp20'
+  head 'https://github.com/inspircd/inspircd.git', :branch => 'master'
 
   skip_clean 'data'
   skip_clean 'logs'

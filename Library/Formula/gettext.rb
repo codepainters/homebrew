@@ -2,27 +2,27 @@ require 'formula'
 
 class Gettext < Formula
   homepage 'http://www.gnu.org/software/gettext/'
-  url 'http://ftpmirror.gnu.org/gettext/gettext-0.18.2.tar.gz'
-  mirror 'http://ftp.gnu.org/gnu/gettext/gettext-0.18.2.tar.gz'
-  sha256 '516a6370b3b3f46e2fc5a5e222ff5ecd76f3089bc956a7587a6e4f89de17714c'
-
-  keg_only "OS X provides the BSD gettext library and some software gets confused if both are in the library path."
+  url 'http://ftpmirror.gnu.org/gettext/gettext-0.18.3.tar.gz'
+  mirror 'http://ftp.gnu.org/gnu/gettext/gettext-0.18.3.tar.gz'
+  sha256 '36f3c1043df803565d4977c1efbd41e1ec0f0301acf5f057984406c34cb9f948'
 
   bottle do
-   sha1 'f5347eea2def6a8649075fe2ca306ce5fa2a5338' => :mountain_lion
-   sha1 '003ba77411550fd471b599c2694bba36d343e98f' => :lion
-   sha1 '976ec00f7046b639b8a687b3316a575031859114' => :snow_leopard
+    revision 1
+    sha1 '392d49de19c44238cb3d25cc43ab5884c3558fe8' => :mountain_lion
+    sha1 '71b16d1305a221ea5ea15e1bb8d2819e4b62a045' => :lion
+    sha1 'bdfe4889e7da5e25f4cf7c42a4d591794afc4e43' => :snow_leopard
   end
+
+  keg_only "OS X provides the BSD gettext library and some software gets confused if both are in the library path."
 
   option :universal
   option 'with-examples', 'Keep example files'
 
   def patches
-    unless build.include? 'with-examples'
-      # Use a MacPorts patch to disable building examples at all,
-      # rather than build them and remove them afterwards.
-      {:p0 => ['https://trac.macports.org/export/102008/trunk/dports/devel/gettext/files/patch-gettext-tools-Makefile.in']}
-    end
+    # Patch to allow building with Xcode 4; safe for any compiler.
+    p = {:p0 => ['https://trac.macports.org/export/79617/trunk/dports/devel/gettext/files/stpncpy.patch',
+                 HOMEBREW_PREFIX/"../patches/gettext-Makefile.in.diff",
+                 'https://trac.macports.org/export/102008/trunk/dports/devel/gettext/files/patch-gettext-tools-Makefile.in']}
   end
 
   def install
@@ -40,10 +40,10 @@ class Gettext < Formula
     system "./configure", "--disable-dependency-tracking",
                           "--disable-debug",
                           "--prefix=#{prefix}",
-                          "--with-included-gettext",
-                          "--with-included-glib",
-                          "--with-included-libcroco",
-                          "--with-included-libunistring",
+                          "--without-included-gettext",
+                          "--without-included-glib",
+                          "--without-included-libcroco",
+                          "--without-included-libxml",
                           "--without-emacs",
                           "--disable-java",
                           # Don't use VCS systems to create these archives

@@ -1,16 +1,28 @@
 require 'formula'
 
+# When trunk is 3.x, then 3.x is devel and 3.(x-1)
+# is stable.
+# https://code.google.com/p/v8/issues/detail?id=2545
+# http://omahaproxy.appspot.com/
+
 class V8 < Formula
   homepage 'http://code.google.com/p/v8/'
-  # Use the official github mirror, it is easier to find tags there
-  url 'https://github.com/v8/v8/archive/3.16.14.tar.gz'
-  sha1 '2940c0ec6b31459d0ba724dba9e586f0de23e2c4'
+  url 'https://github.com/v8/v8/archive/3.19.18.4.tar.gz'
+  sha1 'f44c8eed0fe93b2d04d1d547a1e2640f41161354'
+
+  devel do
+    url 'https://github.com/v8/v8/archive/3.20.7.tar.gz'
+    sha1 '3d7cbebcd1b953f07d87d6111377aeff4ebda1fa'
+  end
 
   head 'https://github.com/v8/v8.git'
+
+  option 'with-readline', 'Use readline instead of libedit'
 
   # gyp currently depends on a full xcode install
   # https://code.google.com/p/gyp/issues/detail?id=292
   depends_on :xcode
+  depends_on 'readline' => :optional
 
   def install
     system 'make dependencies'
@@ -23,7 +35,8 @@ class V8 < Formula
     prefix.install 'include'
     cd 'out/native' do
       lib.install Dir['lib*']
-      bin.install 'd8', 'lineprocessor', 'mksnapshot', 'preparser', 'process', 'shell' => 'v8'
+      bin.install 'd8', 'lineprocessor', 'preparser', 'process', 'shell' => 'v8'
+      bin.install Dir['mksnapshot.*']
     end
   end
 end

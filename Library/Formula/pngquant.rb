@@ -2,10 +2,10 @@ require 'formula'
 
 class Pngquant < Formula
   homepage 'http://pngquant.org/'
-  url 'https://github.com/pornel/improved-pngquant/tarball/1.8.2'
-  sha1 '0ab2116897109a42aa92d3a5f47ea3cb9b1cf87c'
+  url 'https://github.com/pornel/pngquant/archive/1.8.3.tar.gz'
+  sha1 '6bcca182997f4bf6b6cd332b7b26de5770eb1b06'
 
-  head 'https://github.com/pornel/improved-pngquant.git'
+  head 'https://github.com/pornel/pngquant.git'
 
   depends_on :libpng
 

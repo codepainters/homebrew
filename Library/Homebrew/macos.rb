@@ -1,28 +1,16 @@
-require 'macos/version'
+require 'os/mac/version'
+require 'hardware'
 
 module MacOS extend self
 
   # This can be compared to numerics, strings, or symbols
   # using the standard Ruby Comparable methods.
   def version
-    Version.new(MACOS_VERSION)
+    @version ||= Version.new(MACOS_VERSION)
   end
 
   def cat
-    if version == :mountain_lion then :mountain_lion
-    elsif version == :lion then :lion
-    elsif version == :snow_leopard
-      Hardware.is_64_bit? ? :snow_leopard : :snow_leopard_32
-    elsif version == :leopard then :leopard
-    else nil
-    end
-  end
-
-  # TODO: Can be removed when all bottles migrated to underscored cat symbols.
-  def cat_without_underscores
-    possibly_underscored_cat = cat
-    return nil unless possibly_underscored_cat
-    cat.to_s.gsub('_', '').to_sym
+    version.to_sym
   end
 
   def locate tool
@@ -52,17 +40,24 @@ module MacOS extend self
   end
 
   def dev_tools_path
-    @dev_tools_path ||= if File.exist? "/usr/bin/cc" and File.exist? "/usr/bin/make"
+    @dev_tools_path ||= if tools_in_prefix? CLT::STANDALONE_PKG_PATH
+      # In 10.9 the CLT moved from /usr into /Library/Developer/CommandLineTools.
+      Pathname.new "#{CLT::STANDALONE_PKG_PATH}/usr/bin"
+    elsif tools_in_prefix? "/"
       # probably a safe enough assumption (the unix way)
       Pathname.new "/usr/bin"
-    # Note that the exit status of system "xcrun foo" isn't always accurate
     elsif not Xcode.bad_xcode_select_path? and not `/usr/bin/xcrun -find make 2>/dev/null`.empty?
+      # Note that the exit status of system "xcrun foo" isn't always accurate
       # Wherever "make" is there are the dev tools.
       Pathname.new(`/usr/bin/xcrun -find make`.chomp).dirname
     elsif File.exist? "#{Xcode.prefix}/usr/bin/make"
       # cc stopped existing with Xcode 4.3, there are c89 and c99 options though
       Pathname.new "#{Xcode.prefix}/usr/bin"
     end
+  end
+
+  def tools_in_prefix?(prefix)
+    %w{cc make}.all? { |tool| File.executable? "#{prefix}/usr/bin/#{tool}" }
   end
 
   def xctoolchain_path
@@ -113,41 +108,42 @@ module MacOS extend self
   end
 
   def gcc_40_build_version
-    @gcc_40_build_version ||= if locate("gcc-4.0")
-      `#{locate("gcc-4.0")} --version` =~ /build (\d{4,})/
-      $1.to_i
-    end
+    @gcc_40_build_version ||=
+      if (path = locate("gcc-4.0"))
+        %x{#{path} --version}[/build (\d{4,})/, 1].to_i
+      end
   end
+  alias_method :gcc_4_0_build_version, :gcc_40_build_version
 
   def gcc_42_build_version
-    @gcc_42_build_version ||= if locate("gcc-4.2") \
-      and not locate("gcc-4.2").realpath.basename.to_s =~ /^llvm/
-      `#{locate("gcc-4.2")} --version` =~ /build (\d{4,})/
-      $1.to_i
-    end
+    @gcc_42_build_version ||=
+      if (path = locate("gcc-4.2")) && path.realpath.basename.to_s !~ /^llvm/
+        %x{#{path} --version}[/build (\d{4,})/, 1].to_i
+      end
   end
+  alias_method :gcc_build_version, :gcc_42_build_version
 
   def llvm_build_version
     # for Xcode 3 on OS X 10.5 this will not exist
     # NOTE may not be true anymore but we can't test
-    @llvm_build_version ||= if locate("llvm-gcc")
-      `#{locate("llvm-gcc")} --version` =~ /LLVM build (\d{4,})/
-      $1.to_i
-    end
+    @llvm_build_version ||=
+      if (path = locate("llvm-gcc")) && path.realpath.basename.to_s !~ /^clang/
+        %x{#{path} --version}[/LLVM build (\d{4,})/, 1].to_i
+      end
   end
 
   def clang_version
-    @clang_version ||= if locate("clang")
-      `#{locate("clang")} --version` =~ /(?:clang|LLVM) version (\d\.\d)/
-      $1
-    end
+    @clang_version ||=
+      if (path = locate("clang"))
+        %x{#{path} --version}[/(?:clang|LLVM) version (\d\.\d)/, 1]
+      end
   end
 
   def clang_build_version
-    @clang_build_version ||= if locate("clang")
-      `#{locate("clang")} --version` =~ %r[clang-(\d{2,})]
-      $1.to_i
-    end
+    @clang_build_version ||=
+      if (path = locate("clang"))
+        %x{#{path} --version}[%r[clang-(\d{2,})], 1].to_i
+      end
   end
 
   # See these issues for some history:
@@ -184,7 +180,7 @@ module MacOS extend self
   end
 
   def prefer_64_bit?
-    Hardware.is_64_bit? and version != :leopard
+    Hardware::CPU.is_64_bit? and version != :leopard
   end
 
   STANDARD_COMPILERS = {
@@ -204,6 +200,10 @@ module MacOS extend self
     "4.5.1" => { :llvm_build => 2336, :clang => "4.1", :clang_build => 421 },
     "4.5.2" => { :llvm_build => 2336, :clang => "4.1", :clang_build => 421 },
     "4.6"   => { :llvm_build => 2336, :clang => "4.2", :clang_build => 425 },
+    "4.6.1" => { :llvm_build => 2336, :clang => "4.2", :clang_build => 425 },
+    "4.6.2" => { :llvm_build => 2336, :clang => "4.2", :clang_build => 425 },
+    "4.6.3" => { :llvm_build => 2336, :clang => "4.2", :clang_build => 425 },
+    "5.0"   => { :clang => "5.0", :clang_build => 500 },
   }
 
   def compilers_standard?
@@ -227,15 +227,18 @@ module MacOS extend self
   end
 
   def mdfind id
+    return [] unless MACOS
     (@mdfind ||= {}).fetch(id.to_s) do
       @mdfind[id.to_s] = `/usr/bin/mdfind "kMDItemCFBundleIdentifier == '#{id}'"`.split("\n")
     end
   end
 
   def pkgutil_info id
-    `/usr/sbin/pkgutil --pkg-info "#{id}" 2>/dev/null`.strip
+    (@pkginfo ||= {}).fetch(id.to_s) do
+      @pkginfo[id.to_s] = `/usr/sbin/pkgutil --pkg-info "#{id}" 2>/dev/null`.strip
+    end
   end
 end
 
-require 'macos/xcode'
-require 'macos/xquartz'
+require 'os/mac/xcode'
+require 'os/mac/xquartz'

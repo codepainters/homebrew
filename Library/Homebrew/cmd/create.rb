@@ -125,7 +125,7 @@ class FormulaCreator
 
     <% if mode == :cmake %>
       depends_on 'cmake' => :build
-    <% elsif mode == nil %>
+    <% elsif mode.nil? %>
       # depends_on 'cmake' => :build
     <% end %>
       depends_on :x11 # if your formula requires any X11/XQuartz components
@@ -143,7 +143,7 @@ class FormulaCreator
                               "--prefix=\#{prefix}"
         # system "cmake", ".", *std_cmake_args
     <% end %>
-        system "make install" # if this fails, try separate make/make install steps
+        system "make", "install" # if this fails, try separate make/make install steps
       end
 
       test do
