@@ -39,6 +39,8 @@ class Meanwhile < Formula
     ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
     ENV.append_to_cflags("-fstack-protector-all")
 
+    ENV['CC'] = 'gcc'
+
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
                           "--prefix=#{prefix}", "--disable-doxygen",
                           "-disable-mailme", "--disable-static"
