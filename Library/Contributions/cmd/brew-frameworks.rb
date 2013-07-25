@@ -57,10 +57,11 @@ libraries.each { | l |
 		libname = lib.gsub(/dylib$/, '').gsub(/[^A-Za-z]/, '')
 		cellar_path = (f.lib + lib).realpath
 		prefix_path = HOMEBREW_PREFIX/"lib"/lib
+		opt_prefix_path = HOMEBREW_PREFIX/"opt"/name/"lib"/lib
 		executable_path = "@executable_path/../Frameworks/" + libname + ".framework/Versions/" + f.version + "/" + libname
 
-		libs_to_convert << cellar_path << prefix_path
-		framework_paths << executable_path << executable_path
+		libs_to_convert << cellar_path << prefix_path << opt_prefix_path
+		framework_paths << executable_path << executable_path << executable_path
 	}
 }
 
@@ -99,6 +100,16 @@ libraries.each { | l |
 				"--headers=#{headers.join(' ')}",
 				"--headers_no_root",
 				"#{rlinks}"
+		system "otool -L #{frameworks}/#{libname}.subproj/#{libname}.framework/#{libname} | tail -n +2 | grep -E --invert-match \"^[[:space:]](/System|/usr|@executable_path)\""
+		if $? == 0 then
+			ohai "Something is wrong with #{libname}! Check 'otool -L #{frameworks}/#{libname}.subproj/#{libname}.framework/#{libname}'"
+			exit
+		end
+		system "file #{frameworks}/#{libname}.subproj/#{libname}.framework/Versions/#{f.version}/#{libname} | grep -E --invert-match \"Mach-O fat file with 2 architectures\""
+		if $? == 0 then
+			ohai "Something is wrong with #{libname}! Check 'file -L #{frameworks}/#{libname}.subproj/#{libname}.framework/Versions/#{f.version}/#{libname}'"
+			exit
+		end
 	}
 }
 
