@@ -25,6 +25,9 @@ libraries = [ { "name" => "libpurple", "libs" => ["libpurple.0.dylib"] },
 libs_to_convert = []
 framework_paths = []
 
+mode = OpenStruct.new
+mode.overwrite = true
+
 libraries.each { | l |
 	name = l["name"]
 	libs = l["libs"]
@@ -47,9 +50,7 @@ libraries.each { | l |
 
 	keg = Keg.new(cellar+f.version)
 	keg.lock do
-		print "Linking #{keg}... " do
-        	puts "#{keg.link(mode)} symlinks created"
-	    end
+		ohai "#{keg.link(mode)} symlinks created"
 	end
 
 	libs.each { | lib |
