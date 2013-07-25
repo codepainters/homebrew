@@ -2,8 +2,8 @@ require 'formula'
 
 class MobileShell < Formula
   homepage 'http://mosh.mit.edu/'
-  url 'https://github.com/downloads/keithw/mosh/mosh-1.2.2.tar.gz'
-  sha1 'f0227800298d80e9f1353db3b29a807de833d7d2'
+  url 'http://mosh.mit.edu/mosh-1.2.4.tar.gz'
+  sha1 'b1dffe8562d7b2f4956699849fbe5d18bfd7749e'
 
   head 'https://github.com/keithw/mosh.git'
 

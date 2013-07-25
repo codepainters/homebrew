@@ -7,6 +7,7 @@ class Cantera < Formula
   head 'http://cantera.googlecode.com/svn/cantera18/trunk/'
 
   depends_on 'numpy' => :python
+  depends_on :python
   depends_on 'graphviz'
 
   # fixes the Makefiles in Cantera/cxx/demos/ that have broken install commands
@@ -57,7 +58,7 @@ class Cantera < Formula
 
   def caveats; <<-EOS.undent
     The license, demos, tutorials, data, etc. can be found in:
-      #{prefix}
+      #{opt_prefix}
 
     Try the following in python to find the equilibrium composition of a
     stoichiometric methane/air mixture at 1000 K and 1 atm:

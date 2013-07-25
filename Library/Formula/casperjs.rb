@@ -2,9 +2,8 @@ require 'formula'
 
 class Casperjs < Formula
   homepage 'http://www.casperjs.org/'
-  url 'https://github.com/n1k0/casperjs/zipball/1.0.0-RC2'
-  sha1 'b3c336a98a3d3b5e3640ec6c44d93bdbf0974f89'
-  version '1.0.0-RC2'
+  url 'https://github.com/n1k0/casperjs/archive/1.0.2.tar.gz'
+  sha1 '977d68d96ca05a656f31e2f2c15f02b11e6aa724'
 
   head 'https://github.com/n1k0/casperjs.git'
 
@@ -13,5 +12,10 @@ class Casperjs < Formula
   def install
     libexec.install Dir['*']
     bin.install_symlink libexec+'bin/casperjs'
+  end
+
+  devel do
+    url 'https://github.com/n1k0/casperjs/archive/1.1-beta1.tar.gz'
+    sha1 '9e49094c1123ba2bbf610672443bb69a55a350f2'
   end
 end

@@ -1,30 +1,28 @@
 require 'formula'
 
 class SbclBootstrapBinaries < Formula
-  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.0.55/sbcl-1.0.55-x86-darwin-binary.tar.bz2'
-  sha1 '8ea71938c40a6dccfe2d43a86e9b115f4428a218'
-  version "1.0.55"
+  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.1.0/sbcl-1.1.0-x86-64-darwin-binary.tar.bz2'
+  sha1 'ed2069e124027c43926728c48d604efbb4e33950'
+  version "1.1.0"
 end
 
 class Sbcl < Formula
   homepage 'http://www.sbcl.org/'
-  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.0.58/sbcl-1.0.58-source.tar.bz2'
-  sha1 '79c9258a15c257849790b86238999c18ec191033'
+  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.1.9/sbcl-1.1.9-source.tar.bz2'
+  sha1 'a2a2e165429940ecd5cf1c3bc3068898c4b864ea'
 
   head 'git://sbcl.git.sourceforge.net/gitroot/sbcl/sbcl.git'
 
   bottle do
-    url 'https://downloads.sf.net/project/machomebrew/Bottles/sbcl-1.0.55-bottle.tar.gz'
-    sha1 '3c13225c8fe3eabf54e9d368e6b74318a5546430'
+    sha1 '7e35a9310709d31b97bc58d9f044d95ef35efa21' => :mountain_lion
+    sha1 '86d524f4d2ba3ee9a642463c065f1db594913ee7' => :lion
+    sha1 '76a5b9f8b10b998f8294ece1d6181616489ff703' => :snow_leopard
   end
 
   fails_with :llvm do
     build 2334
     cause "Compilation fails with LLVM."
   end
-
-  skip_clean 'bin'
-  skip_clean 'lib'
 
   option "32-bit"
   option "without-threads", "Build SBCL without support for native threads"
@@ -61,7 +59,7 @@ class Sbcl < Formula
     # Remove non-ASCII values from environment as they cause build failures
     # More information: http://bugs.gentoo.org/show_bug.cgi?id=174702
     ENV.delete_if do |key, value|
-      value =~ /[\x80-\xff]/
+      value =~ /[\x80-\xff]/n
     end
 
     SbclBootstrapBinaries.new.brew do
@@ -78,5 +76,9 @@ class Sbcl < Formula
 
     ENV['INSTALL_ROOT'] = prefix
     system "sh install.sh"
+  end
+
+  test do
+    system "#{bin}/sbcl", "--version"
   end
 end

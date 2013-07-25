@@ -13,8 +13,15 @@ class TigerVnc < Formula
 
   # Fix build of included fltk library on Mountain Lion
   # http://www.fltk.org/str.php?L2864
+  # Patch for compatibility with gnutls 3
+  # Fix black screen issue on Mountain Lion
+  # http://permalink.gmane.org/gmane.network.vnc.tigervnc.user/544
   def patches
-    { :p0 => DATA }
+    { :p0 => DATA,
+      :p1 => [
+        "http://tigervnc.svn.sourceforge.net/viewvc/tigervnc/trunk/vncviewer/OSXPixelBuffer.cxx?r1=4646&r2=4956&view=patch",
+        "http://tigervnc.svn.sourceforge.net/viewvc/tigervnc/trunk/vncviewer/OSXPixelBuffer.h?r1=4504&r2=4956&view=patch"
+    ]}
   end
 
   def install
@@ -82,3 +89,32 @@ Index: common/fltk/FL/mac.H
 +#endif // FL_LIBRARY || FL_INTERNALS
 
  typedef CGImageRef Fl_Bitmask;
+
+Index: common/rdr/TLSInStream.cxx
+===================================================================
+--- /dev/null
++++ common/rdr/TLSInStream.cxx
+@@ -27,9 +27,7 @@
+ #include <rdr/TLSInStream.h>
+ #include <errno.h>
+
+-#ifdef HAVE_OLD_GNUTLS
+ #define gnutls_transport_set_global_errno(A) do { errno = (A); } while(0)
+-#endif
+
+ #ifdef HAVE_GNUTLS
+ using namespace rdr;
+Index: common/rdr/TLSOutStream.cxx
+===================================================================
+--- /dev/null
++++ common/rdr/TLSOutStream.cxx
+@@ -27,9 +27,7 @@
+ #include <rdr/TLSOutStream.h>
+ #include <errno.h>
+
+-#ifdef HAVE_OLD_GNUTLS
+ #define gnutls_transport_set_global_errno(A) do { errno = (A); } while(0)
+-#endif
+
+ #ifdef HAVE_GNUTLS
+ using namespace rdr;

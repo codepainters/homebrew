@@ -2,20 +2,14 @@ require 'formula'
 
 class Rust < Formula
   homepage 'http://www.rust-lang.org/'
-  url 'http://dl.rust-lang.org/dist/rust-0.3.1.tar.gz'
-  sha256 'eb99ff2e745ecb6eaf01d4caddebce397a2b4cda6836a051cb2d493b9cedd018'
+  url 'http://static.rust-lang.org/dist/rust-0.7.tar.gz'
+  sha256 '0b88b8a4489382e0a69214eaab88e2e7c316ec33c164af0d3b53630b17590df0'
+
+  head 'https://github.com/mozilla/rust.git'
 
   fails_with :clang do
     build 318
     cause "cannot initialize a parameter of type 'volatile long long *' with an rvalue of type 'int *'"
-  end
-
-  def patches
-    # fix for Mountain Lion's clang 4.0
-    # should be part of next release (commit 50f2db4)
-    # fix for Mountain Lion's clang 4.1
-    # should be part of next release (commit 25bc65b)
-    DATA
   end
 
   def install
@@ -29,21 +23,6 @@ class Rust < Formula
   def test
     system "#{bin}/rustc"
     system "#{bin}/rustdoc"
-    system "#{bin}/cargo"
+    system "#{bin}/rustpkg"
   end
 end
-
-__END__
-diff --git a/configure b/configure
-index 06bddcc..040bae9 100755
---- a/configure
-+++ b/configure
-@@ -400,7 +400,7 @@ then
-                       | cut -d ' ' -f 2)
-
-     case $CFG_CLANG_VERSION in
--        (3.0svn | 3.0 | 3.1)
-+        (3.0svn | 3.0 | 3.1 | 4.0 | 4.1)
-         step_msg "found ok version of CLANG: $CFG_CLANG_VERSION"
-         CFG_C_COMPILER="clang"
-         ;;

@@ -1,45 +1,39 @@
 require 'formula'
 
 class ErlangManuals < Formula
-  url 'http://erlang.org/download/otp_doc_man_R15B02.tar.gz'
-  sha1 'e50cc887b36b0b2f158a87fa5b21cb2b2c6679b0'
+  url 'http://erlang.org/download/otp_doc_man_R15B03-1.tar.gz'
+  sha1 'c8674767cd0c1f98946f6a08c7ae318c3f026988'
 end
 
 class ErlangHtmls < Formula
-  url 'http://erlang.org/download/otp_doc_html_R15B02.tar.gz'
-  sha1 'b2ef425fe5aa9f4fff7afaa9b8204c45357eaa89'
+  url 'http://erlang.org/download/otp_doc_html_R15B03-1.tar.gz'
+  sha1 '49d761d8554a83be00e18f681b32b94572f9c050'
 end
 
 class ErlangHeadManuals < Formula
-  url 'http://erlang.org/download/otp_doc_man_R15B02.tar.gz'
-  sha1 'e50cc887b36b0b2f158a87fa5b21cb2b2c6679b0'
+  url 'http://erlang.org/download/otp_doc_man_R15B03-1.tar.gz'
+  sha1 'c8674767cd0c1f98946f6a08c7ae318c3f026988'
 end
 
 class ErlangHeadHtmls < Formula
-  url 'http://erlang.org/download/otp_doc_html_R15B02.tar.gz'
-  sha1 'b2ef425fe5aa9f4fff7afaa9b8204c45357eaa89'
+  url 'http://erlang.org/download/otp_doc_html_R15B03-1.tar.gz'
+  sha1 '49d761d8554a83be00e18f681b32b94572f9c050'
 end
 
 class Erlang < Formula
   homepage 'http://www.erlang.org'
   # Download tarball from GitHub; it is served faster than the official tarball.
-  url 'https://github.com/erlang/otp/tarball/OTP_R15B02'
-  sha1 '540d0d0a006082a8bc3e1fc239f2043fee015967'
+  url 'https://github.com/erlang/otp/archive/OTP_R15B03-1.tar.gz'
+  sha1 '7843070f5d325f95ef13022fc416b22b6b14120d'
 
-  head 'https://github.com/erlang/otp.git', :branch => 'dev'
+  head 'https://github.com/erlang/otp.git', :branch => 'master'
 
   bottle do
-    sha1 '94cbe622b817e8a5bd7797b615aad5e47c5d8660' => :mountainlion
-    sha1 'ec5b4749668c95ad55410c0316390046ee576895' => :lion
-    sha1 '10b0aa609354c07938ac936578c9d1f12a4249ba' => :snowleopard
+    revision 1
+    sha1 '87d2acd2d27a9b774886a2fb7be0f8f919fca060' => :mountain_lion
+    sha1 '79ec42e6340a32032c39715d4e0a5e1909918af5' => :lion
+    sha1 'afafe2a4b51272eb6ed0f6bfdc4cbdfae0cdc19c' => :snow_leopard
   end
-
-  # We can't strip the beam executables or any plugins, there isn't really
-  # anything else worth stripping and it takes a really, long time to run
-  # `file` over everything in lib because there is almost 4000 files (and
-  # really erlang guys! what's with that?! Most of them should be in share/erlang!)
-  # may as well skip bin too, everything is just shell scripts
-  skip_clean ['lib', 'bin']
 
   # remove the autoreconf if possible
   depends_on :automake
@@ -74,7 +68,7 @@ class Erlang < Formula
             "--enable-shared-zlib",
             "--enable-smp-support"]
 
-    args << "--with-dynamic-trace=dtrace" unless MacOS.version == :leopard
+    args << "--with-dynamic-trace=dtrace" unless MacOS.version <= :leopard or not MacOS::CLT.installed?
 
     unless build.include? 'disable-hipe'
       # HIPE doesn't strike me as that reliable on OS X
@@ -91,11 +85,16 @@ class Erlang < Formula
     system "./configure", *args
     touch 'lib/wx/SKIP' if MacOS.version >= :snow_leopard
     system "make"
+    ENV.j1 # Install is not thread-safe; can try to create folder twice and fail
     system "make install"
 
     unless build.include? 'no-docs'
       manuals = build.head? ? ErlangHeadManuals : ErlangManuals
-      manuals.new.brew { man.install Dir['man/*'] }
+      manuals.new.brew {
+        man.install Dir['man/*']
+        # erl -man expects man pages in lib/erlang/man
+        (lib+'erlang').install_symlink man
+      }
 
       htmls = build.head? ? ErlangHeadHtmls : ErlangHtmls
       htmls.new.brew { doc.install Dir['*'] }

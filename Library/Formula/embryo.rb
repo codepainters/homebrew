@@ -2,8 +2,8 @@ require 'formula'
 
 class Embryo < Formula
   homepage 'http://trac.enlightenment.org/e/wiki/Embryo'
-  url 'http://download.enlightenment.org/releases/embryo-1.2.0.tar.gz'
-  sha1 '5e392a41ead0d696512b02f436eeae8747ddfbcb'
+  url 'http://download.enlightenment.org/releases/embryo-1.7.7.tar.gz'
+  sha1 '204fa38463b64d3b97e4c598942e9389dc89216e'
 
   head 'http://svn.enlightenment.org/svn/e/trunk/embryo/'
 

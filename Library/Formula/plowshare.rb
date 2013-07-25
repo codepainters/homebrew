@@ -2,8 +2,9 @@ require 'formula'
 
 class Plowshare < Formula
   homepage 'http://code.google.com/p/plowshare/'
-  url 'http://plowshare.googlecode.com/files/plowshare-snapshot-git20120707.tar.gz'
-  sha1 'ca7b5eccf817b88584f0b4a6769ab770b2af1e1a'
+  url 'http://plowshare.googlecode.com/files/plowshare3-snapshot-git20130520.c289008.tar.gz'
+  version '3.GIT-c289008'
+  sha1 '4a69918dbf6faa1698ddcf581aeb7c15d829caf2'
 
   head 'https://code.google.com/p/plowshare/', :using => :git
 
@@ -24,8 +25,16 @@ class Plowshare < Formula
     ENV["PREFIX"] = prefix
     system "bash setup.sh install"
   end
-end
 
+  def caveats; <<-EOS.undent
+    The default installation of imagemagick does not enable
+    X11 support. plowshare uses the display command which does
+    not work if X11 support is not enabled. To enable:
+      brew remove imagemagick
+      brew install imagemagick --with-x
+    EOS
+  end
+end
 
 # This patch makes sure GNUtools are used on OSX.
 # gnu-getopt is keg-only hence the backtick expansion.

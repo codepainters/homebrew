@@ -5,8 +5,7 @@ require 'mach'
 class Pathname
   include MachO
 
-  BOTTLE_EXTNAME_RX = /(\.[a-z]+\.bottle\.(\d+\.)?tar\.gz)$/
-  OLD_BOTTLE_EXTNAME_RX = /((\.[a-z]+)?[\.-]bottle\.tar\.gz)$/
+  BOTTLE_EXTNAME_RX = /(\.[a-z_]+(32)?\.bottle\.(\d+\.)?tar\.gz)$/
 
   def install *sources
     results = []
@@ -63,6 +62,7 @@ class Pathname
 
     return return_value
   end
+  protected :install_p
 
   # Creates symlinks to sources in this folder.
   def install_symlink *sources
@@ -95,10 +95,11 @@ class Pathname
 
     return dst
   end
+  protected :install_symlink_p
 
   # we assume this pathname object is a file obviously
   def write content
-    raise "Will not overwrite #{to_s}" if exist? and not ARGV.force?
+    raise "Will not overwrite #{to_s}" if exist?
     dirname.mkpath
     File.open(self, 'w') {|f| f.write content }
   end
@@ -123,19 +124,17 @@ class Pathname
 
   # extended to support common double extensions
   alias extname_old extname
-  def extname
-    BOTTLE_EXTNAME_RX.match to_s
+  def extname(path=to_s)
+    BOTTLE_EXTNAME_RX.match(path)
     return $1 if $1
-    OLD_BOTTLE_EXTNAME_RX.match to_s
+    /(\.(tar|cpio)\.(gz|bz2|xz|Z))$/.match(path)
     return $1 if $1
-    /(\.(tar|cpio)\.(gz|bz2|xz|Z))$/.match to_s
-    return $1 if $1
-    return File.extname(to_s)
+    return File.extname(path)
   end
 
   # for filetypes we support, basename without extension
   def stem
-    return File.basename(to_s, extname)
+    File.basename((path = to_s), extname(path))
   end
 
   # I don't trust the children.length == 0 check particularly, not to mention
@@ -144,8 +143,14 @@ class Pathname
   def rmdir_if_possible
     rmdir
     true
-  rescue SystemCallError => e
-    raise unless e.errno == Errno::ENOTEMPTY::Errno or e.errno == Errno::EACCES::Errno or e.errno == Errno::ENOENT::Errno
+  rescue Errno::ENOTEMPTY
+    if (ds_store = self+'.DS_Store').exist? && children.length == 1
+      ds_store.unlink
+      retry
+    else
+      false
+    end
+  rescue Errno::EACCES, Errno::ENOENT
     false
   end
 
@@ -158,7 +163,7 @@ class Pathname
     out=''
     n=`find #{to_s} -type f ! -name .DS_Store | wc -l`.to_i
     out<<"#{n} files, " if n > 1
-    out<<`/usr/bin/du -hd0 #{to_s} | cut -d"\t" -f1`.strip
+    out<<`/usr/bin/du -hs #{to_s} | cut -d"\t" -f1`.strip
   end
 
   def version
@@ -174,26 +179,28 @@ class Pathname
     # OS X installer package
     return :pkg if self.extname == '.pkg'
 
+    # If the filename ends with .gz not preceded by .tar
+    # then we want to gunzip but not tar
+    return :gzip_only if self.extname == '.gz'
+
     # Get enough of the file to detect common file types
     # POSIX tar magic has a 257 byte offset
-    magic_bytes = nil
-    File.open(self) { |f| magic_bytes = f.read(262) }
-
     # magic numbers stolen from /usr/share/file/magic/
-    case magic_bytes
-    when /^PK\003\004/   then :zip
-    when /^\037\213/     then :gzip
-    when /^BZh/          then :bzip2
-    when /^\037\235/     then :compress
-    when /^.{257}ustar/  then :tar
-    when /^\xFD7zXZ\x00/ then :xz
-    when /^Rar!/         then :rar
+    case open { |f| f.read(262) }
+    when /^PK\003\004/n         then :zip
+    when /^\037\213/n           then :gzip
+    when /^BZh/n                then :bzip2
+    when /^\037\235/n           then :compress
+    when /^.{257}ustar/n        then :tar
+    when /^\xFD7zXZ\x00/n       then :xz
+    when /^Rar!/n               then :rar
+    when /^7z\xBC\xAF\x27\x1C/n then :p7zip
     else
       # This code so that bad-tarballs and zips produce good error messages
       # when they don't unarchive properly.
       case extname
-        when ".tar.gz", ".tgz", ".tar.bz2", ".tbz" then :tar
-        when ".zip" then :zip
+      when ".tar.gz", ".tgz", ".tar.bz2", ".tbz" then :tar
+      when ".zip" then :zip
       end
     end
   end
@@ -210,11 +217,6 @@ class Pathname
       end
     end
     incr_hash.hexdigest
-  end
-
-  def md5
-    require 'digest/md5'
-    incremental_hash(Digest::MD5)
   end
 
   def sha1
@@ -251,7 +253,12 @@ class Pathname
   end
 
   def resolved_path_exists?
-    (dirname+readlink).exist?
+    link = readlink
+  rescue ArgumentError
+    # The link target contains NUL bytes
+    false
+  else
+    (dirname+link).exist?
   end
 
   # perhaps confusingly, this Pathname object becomes the symlink pointing to
@@ -268,11 +275,24 @@ class Pathname
           raise <<-EOS.undent
             Could not symlink file: #{src.expand_path}
             Target #{self} already exists. You may need to delete it.
-            To force the link and delete this file, do:
-              brew link -f formula_name
+            To force the link and overwrite all other conflicting files, do:
+              brew link --overwrite formula_name
 
             To list all files that would be deleted:
-              brew link -n formula_name
+              brew link --overwrite --dry-run formula_name
+            EOS
+        # #exist? will return false for symlinks whose target doesn't exist
+        elsif self.symlink?
+          raise <<-EOS.undent
+            Could not symlink file: #{src.expand_path}
+            Target #{self} already exists as a symlink to #{readlink}.
+            If this file is from another formula, you may need to
+            `brew unlink` it. Otherwise, you may want to delete it.
+            To force the link and overwrite all other conflicting files, do:
+              brew link --overwrite formula_name
+
+            To list all files that would be deleted:
+              brew link --overwrite --dry-run formula_name
             EOS
         elsif !dirname.writable_real?
           raise <<-EOS.undent
@@ -331,14 +351,6 @@ class Pathname
   end
 
   def find_formula
-    # remove special casing once tap is established and alt removed
-    if self == HOMEBREW_LIBRARY/"Taps/adamv-alt"
-      all_formula do |file|
-        yield file
-      end
-      return
-    end
-
     [self/:Formula, self/:HomebrewFormula, self].each do |d|
       if d.exist?
         d.children.map{ |child| child.relative_path_from(self) }.each do |pn|
@@ -347,6 +359,77 @@ class Pathname
         break
       end
     end
+  end
+
+  # Writes an exec script in this folder for each target pathname
+  def write_exec_script *targets
+    targets.flatten!
+    if targets.empty?
+      opoo "tried to write exec scripts to #{self} for an empty list of targets"
+    end
+    targets.each do |target|
+      target = Pathname.new(target) # allow pathnames or strings
+      (self+target.basename()).write <<-EOS.undent
+      #!/bin/bash
+      exec "#{target}" "$@"
+      EOS
+    end
+  end
+
+  # Writes an exec script that invokes a java jar
+  def write_jar_script target_jar, script_name, java_opts=""
+    (self+script_name).write <<-EOS.undent
+    #!/bin/bash
+    exec java #{java_opts} -jar #{target_jar} "$@"
+    EOS
+  end
+
+  def install_metafiles from=nil
+    # Default to current path, and make sure we have a pathname, not a string
+    from = "." if from.nil?
+    from = Pathname.new(from.to_s)
+
+    from.children.each do |p|
+      next if p.directory?
+      next unless FORMULA_META_FILES.should_copy? p
+      # Some software symlinks these files (see help2man.rb)
+      filename = p.resolved_path
+      # Some software links metafiles together, so by the time we iterate to one of them
+      # we may have already moved it. libxml2's COPYING and Copyright are affected by this.
+      next unless filename.exist?
+      filename.chmod 0644
+      self.install filename
+    end
+  end
+
+  # We redefine these private methods in order to add the /o modifier to
+  # the Regexp literals, which forces string interpolation to happen only
+  # once instead of each time the method is called. This is fixed in 1.9+.
+  if RUBY_VERSION <= "1.8.7"
+    alias_method :old_chop_basename, :chop_basename
+    def chop_basename(path)
+      base = File.basename(path)
+      if /\A#{Pathname::SEPARATOR_PAT}?\z/o =~ base
+        return nil
+      else
+        return path[0, path.rindex(base)], base
+      end
+    end
+    private :chop_basename
+
+    alias_method :old_prepend_prefix, :prepend_prefix
+    def prepend_prefix(prefix, relpath)
+      if relpath.empty?
+        File.dirname(prefix)
+      elsif /#{SEPARATOR_PAT}/o =~ prefix
+        prefix = File.dirname(prefix)
+        prefix = File.join(prefix, "") if File.basename(prefix + 'a') != 'a'
+        prefix + relpath
+      else
+        prefix + relpath
+      end
+    end
+    private :prepend_prefix
   end
 end
 

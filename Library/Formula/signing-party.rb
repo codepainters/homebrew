@@ -1,25 +1,10 @@
 require 'formula'
 
 class GnupgInstalled < Requirement
-  def message; <<-EOS.undent
-    Gnupg is required to use these tools.
+  fatal true
+  default_formula 'gnupg2'
 
-    You can install Gnupg or Gnupg2 with Homebrew:
-      brew install gnupg
-      brew install gnupg2
-
-    Or you can use one of several different
-    prepackaged installers that are available.
-    EOS
-  end
-
-  def satisfied?
-    which 'gpg' or which 'gpg2'
-  end
-
-  def fatal?
-    false
-  end
+  satisfy { which('gpg') || which('gpg2') }
 end
 
 class SigningParty < Formula
@@ -27,7 +12,7 @@ class SigningParty < Formula
   url 'http://ftp.debian.org/debian/pool/main/s/signing-party/signing-party_1.1.4.orig.tar.gz'
   sha1 '092b7d644b7a8a8d2e82fd6ddb453ca58020ed31'
 
-  depends_on GnupgInstalled.new
+  depends_on GnupgInstalled
   depends_on 'dialog'
   depends_on 'qprint'
   depends_on 'MIME::Tools' => :perl
@@ -47,6 +32,8 @@ class SigningParty < Formula
       system "make"
       man1.install Dir['*.1']
       bin.install 'caff'
+      bin.install 'pgp-clean'
+      bin.install 'pgp-fixkey'
       (doc+'caff').install Dir['README*', 'caffrc.sample']
     end
 

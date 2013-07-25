@@ -8,7 +8,10 @@ module Homebrew extend self
     # Things below use the CELLAR, which doesn't until the first formula is installed.
     return unless HOMEBREW_CELLAR.exist?
 
-    if ARGV.include? '--versions'
+    if ARGV.include? '--pinned'
+      require 'formula'
+      list_pinned
+    elsif ARGV.include? '--versions'
       list_versions
     elsif ARGV.named.empty?
       ENV['CLICOLOR'] = nil
@@ -20,11 +23,20 @@ module Homebrew extend self
     end
   end
 
-private
+  private
 
   def list_unbrewed
     dirs = HOMEBREW_PREFIX.children.select{ |pn| pn.directory? }.map{ |pn| pn.basename.to_s }
     dirs -= %w[Library Cellar .git]
+
+    # Exclude the cache, if it has been located under the prefix
+    cache_folder = (HOMEBREW_CACHE.relative_path_from(HOMEBREW_PREFIX)).to_s
+    dirs -= [cache_folder]
+
+    # Exclude the repository, if it has been located under the prefix
+    cache_folder = (HOMEBREW_REPOSITORY.relative_path_from(HOMEBREW_PREFIX)).to_s
+    dirs -= [cache_folder]
+
     cd HOMEBREW_PREFIX
     exec 'find', *dirs + %w[-type f ( ! -iname .ds_store ! -iname brew ! -iname brew-man.1 ! -iname brew.1 )]
   end
@@ -37,6 +49,19 @@ private
     end.each do |d|
       versions = d.children.select{ |pn| pn.directory? }.map{ |pn| pn.basename.to_s }
       puts "#{d.basename} #{versions*' '}"
+    end
+  end
+
+  def list_pinned
+    if ARGV.named.empty?
+      HOMEBREW_CELLAR.children.select{ |pn| pn.directory? }
+    else
+      ARGV.named.map{ |n| HOMEBREW_CELLAR+n }.select{ |pn| pn.exist? }
+    end.select do |d|
+      keg_pin = (HOMEBREW_LIBRARY/"PinnedKegs"/d.basename.to_s)
+      keg_pin.exist? or keg_pin.symlink?
+    end.each do |d|
+      puts d.basename
     end
   end
 end
@@ -59,7 +84,7 @@ class PrettyListing
           else
             print_dir pn
           end
-        elsif not (FORMULA_META_FILES + %w[.DS_Store INSTALL_RECEIPT.json]).include? pn.basename.to_s
+        elsif FORMULA_META_FILES.should_list? pn.basename.to_s
           puts pn
         end
       end

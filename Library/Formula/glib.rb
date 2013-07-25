@@ -2,8 +2,8 @@ require 'formula'
 
 class Glib < Formula
   homepage 'http://developer.gnome.org/glib/'
-  url 'http://ftp.gnome.org/pub/gnome/sources/glib/2.32/glib-2.32.4.tar.xz'
-  sha256 'a5d742a4fda22fb6975a8c0cfcd2499dd1c809b8afd4ef709bda4d11b167fae2'
+  url 'http://ftp.gnome.org/pub/gnome/sources/glib/2.36/glib-2.36.3.tar.xz'
+  sha256 '5ec433bf6ce02e4c436619c3d0b9cecdd1898469398a636bad27c1f5804c761e'
 
   option :universal
   option 'test', 'Build a debug build and run tests. NOTE: Not all tests succeed yet'
@@ -19,17 +19,10 @@ class Glib < Formula
   end
 
   def patches
-    # https://bugzilla.gnome.org/show_bug.cgi?id=673047  Still open at 2.32.3
-    # https://bugzilla.gnome.org/show_bug.cgi?id=644473  Still open at 2.32.3
-    # https://bugzilla.gnome.org/show_bug.cgi?id=673135  Resolved as wontfix.
-    p = { :p1 => %W[
-        https://raw.github.com/gist/2235195/19cdaebdff7dcc94ccd9b3747d43a09318f0b846/glib-gunicollate.diff
-        https://raw.github.com/gist/2235202/26f885e079e4d61da26d239970301b818ddbb4ab/glib-gtimezone.diff
-        https://raw.github.com/gist/2246469/591586214960f7647b1454e7d547c3935988a0a7/glib-configurable-paths.diff
-      ]}
-    p[:p0] = %W[
-        https://trac.macports.org/export/95596/trunk/dports/devel/glib2/files/patch-configure.diff
-      ] if build.universal?
+    p = {}
+    # https://bugzilla.gnome.org/show_bug.cgi?id=673135 Resolved as wontfix.
+    p[:p1] = "https://raw.github.com/gist/5393707/5a9047ab7838709084b36242a44471b02d036386/glib-configurable-paths.patch"
+    p[:p0] = "https://trac.macports.org/export/95596/trunk/dports/devel/glib2/files/patch-configure.diff" if build.universal?
     p
   end
 
@@ -52,6 +45,8 @@ class Glib < Formula
       --disable-maintainer-mode
       --disable-dependency-tracking
       --disable-dtrace
+      --disable-modular-tests
+      --disable-libelf
       --prefix=#{prefix}
       --localstatedir=#{var}
       --disable-static
@@ -61,6 +56,7 @@ class Glib < Formula
       --disable-selinux
       --with-threads=posix
       --disable-visibility
+      --with-gio-module-dir=#{HOMEBREW_PREFIX}/lib/gio/modules
     ]
 
     system "./configure", *args
@@ -78,44 +74,35 @@ class Glib < Formula
     # system, but pkg-config or glib is not smart enough to have determined
     # that libintl.dylib isn't in the DYLIB_PATH so we have to add it
     # manually.
-    gettext = Formula.factory('gettext')
+    gettext = Formula.factory('gettext').opt_prefix
     inreplace lib+'pkgconfig/glib-2.0.pc' do |s|
       s.gsub! 'Libs: -L${libdir} -lglib-2.0 -lintl',
-              "Libs: -L${libdir} -lglib-2.0 -L#{gettext.lib} -lintl"
-
+              "Libs: -L${libdir} -lglib-2.0 -L#{gettext}/lib -lintl"
       s.gsub! 'Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include',
-              "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext.include}"
+              "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext}/include"
     end
 
     (share+'gtk-doc').rmtree
   end
 
-  def test
-    unless Formula.factory("pkg-config").installed?
-      puts "pkg-config is required to run this test, but is not installed"
-      exit 1
-    end
+  test do
+    (testpath/'test.c').write <<-EOS.undent
+      #include <string.h>
+      #include <glib.h>
 
-    mktemp do
-      (Pathname.pwd/'test.c').write <<-EOS.undent
-        #include <string.h>
-        #include <glib.h>
+      int main(void)
+      {
+          gchar *result_1, *result_2;
+          char *str = "string";
 
-        int main(void)
-        {
-            gchar *result_1, *result_2;
-            char *str = "string";
+          result_1 = g_convert(str, strlen(str), "ASCII", "UTF-8", NULL, NULL, NULL);
+          result_2 = g_convert(result_1, strlen(result_1), "UTF-8", "ASCII", NULL, NULL, NULL);
 
-            result_1 = g_convert(str, strlen(str), "ASCII", "UTF-8", NULL, NULL, NULL);
-            result_2 = g_convert(result_1, strlen(result_1), "UTF-8", "ASCII", NULL, NULL, NULL);
-
-            return (strcmp(str, result_2) == 0) ? 0 : 1;
-        }
-        EOS
-      flags = *`pkg-config --cflags --libs glib-2.0`.split
-      flags += ENV.cflags.split
-      system ENV.cc, "-o", "test", "test.c", *flags
-      system "./test"
-    end
+          return (strcmp(str, result_2) == 0) ? 0 : 1;
+      }
+      EOS
+    flags = `pkg-config --cflags --libs glib-2.0`.split + ENV.cflags.split
+    system ENV.cc, "-o", "test", "test.c", *flags
+    system "./test"
   end
 end

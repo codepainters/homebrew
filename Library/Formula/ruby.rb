@@ -2,24 +2,28 @@ require 'formula'
 
 class Ruby < Formula
   homepage 'http://www.ruby-lang.org/en/'
-  url 'http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p286.tar.gz'
-  sha256 'e94367108751fd6bce79401d947baa66096c757fd3a0856350a2abd05d26d89d'
+  url 'http://ftp.ruby-lang.org/pub/ruby/2.0/ruby-2.0.0-p247.tar.bz2'
+  sha256 '08e3d4b85b8a1118a8e81261f59dd8b4ddcfd70b6ae554e0ec5ceb99c3185e8a'
 
   head 'http://svn.ruby-lang.org/repos/ruby/trunk/'
 
-  env :std
-
   option :universal
-  option 'with-suffix', 'Suffix commands with "19"'
+  option 'with-suffix', 'Suffix commands with "20"'
   option 'with-doc', 'Install documentation'
   option 'with-tcltk', 'Install with Tcl/Tk support'
 
-  depends_on :autoconf if build.head?
+  if build.universal?
+    depends_on 'autoconf' => :build
+  elsif build.head?
+    depends_on :autoconf
+  end
+
   depends_on 'pkg-config' => :build
   depends_on 'readline'
   depends_on 'gdbm'
   depends_on 'libyaml'
-  depends_on :x11 if build.include? 'with-tcltk'
+  depends_on 'openssl' if MacOS.version >= :mountain_lion
+  depends_on :x11 if build.with? 'tcltk'
 
   fails_with :llvm do
     build 2326
@@ -28,12 +32,20 @@ class Ruby < Formula
   def install
     system "autoconf" if build.head?
 
-    args = ["--prefix=#{prefix}",
-            "--enable-shared"]
-
-    args << "--program-suffix=19" if build.include? "with-suffix"
+    args = %W[--prefix=#{prefix} --enable-shared]
+    args << "--program-suffix=20" if build.with? "suffix"
     args << "--with-arch=x86_64,i386" if build.universal?
-    args << "--disable-tcltk-framework" <<  "--with-out-ext=tcl" <<  "--with-out-ext=tk" unless build.include? "with-tcltk"
+    args << "--with-out-ext=tk" unless build.with? "tcltk"
+    args << "--disable-install-doc" unless build.with? "doc"
+    args << "--disable-dtrace" unless MacOS::CLT.installed?
+
+    # OpenSSL is deprecated on OS X 10.8 and Ruby can't find the outdated
+    # version (0.9.8r 8 Feb 2011) that ships with the system.
+    # See discussion https://github.com/sstephenson/ruby-build/issues/304
+    # and https://github.com/mxcl/homebrew/pull/18054
+    if MacOS.version >= :mountain_lion
+      args << "--with-openssl-dir=#{Formula.factory('openssl').opt_prefix}"
+    end
 
     # Put gem, site and vendor folders in the HOMEBREW_PREFIX
     ruby_lib = HOMEBREW_PREFIX/"lib/ruby"
@@ -48,13 +60,11 @@ class Ruby < Formula
     system "./configure", *args
     system "make"
     system "make install"
-    system "make install-doc" if build.include? "with-doc"
-
   end
 
   def caveats; <<-EOS.undent
     NOTE: By default, gem installed binaries will be placed into:
-      #{bin}
+      #{opt_prefix}/bin
 
     You may want to add this to your PATH.
     EOS

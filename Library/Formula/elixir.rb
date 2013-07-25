@@ -1,34 +1,37 @@
 require 'formula'
 
 class ErlangInstalled < Requirement
+  fatal true
+
+  satisfy {
+    which 'erl' and begin
+      `erl -noshell -eval 'io:fwrite("~s~n", [erlang:system_info(otp_release)]).' -s erlang halt | grep -q '^R1[6789]'`
+      $?.exitstatus == 0
+    end
+  }
+
   def message; <<-EOS.undent
-    Erlang is required to install.
+    Erlang R16 is required to install.
 
     You can install this with:
-      brew install erlang
+      brew tap homebrew/versions
+      brew unlink erlang
+      brew install erlang-r16
 
     Or you can use an official installer from:
       http://www.erlang.org/
     EOS
   end
-
-  def satisfied?
-    which 'erl'
-  end
-
-  def fatal?
-    true
-  end
 end
 
 class Elixir < Formula
   homepage 'http://elixir-lang.org/'
-  url  'https://github.com/elixir-lang/elixir/tarball/v0.6.0'
-  sha1 'bfa2403876839a9b3af532c70d198d58ac97bdad'
+  url  'https://github.com/elixir-lang/elixir/archive/v0.10.0.tar.gz'
+  sha1 '185347cdebd5cbd95bd346c32ed9666bf722d05a'
 
-  head 'https://github.com/elixir-lang/elixir.git', :branch => "stable"
+  head 'https://github.com/elixir-lang/elixir.git'
 
-  depends_on ErlangInstalled.new
+  depends_on ErlangInstalled
 
   env :userpaths
 
@@ -42,7 +45,7 @@ class Elixir < Formula
     end
   end
 
-  def test
-    system "#{bin}/elixir -v"
+  test do
+    system "#{bin}/elixir", "-v"
   end
 end

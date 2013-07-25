@@ -2,8 +2,8 @@ require 'formula'
 
 class Znc < Formula
   homepage 'http://wiki.znc.in/ZNC'
-  url 'http://znc.in/releases/archive/znc-0.206.tar.gz'
-  sha1 'c5fe2575ef29187d2de5d08a08e17458c0ce54b9'
+  url 'http://znc.in/releases/archive/znc-1.0.tar.gz'
+  sha1 '50e6e3aacb67cf0a63d77f5031d4b75264cee294'
 
   head 'https://github.com/znc/znc.git'
 
@@ -13,7 +13,6 @@ class Znc < Formula
   end
 
   depends_on 'pkg-config' => :build
-  depends_on 'c-ares' => :optional
 
   skip_clean 'bin/znc'
   skip_clean 'bin/znc-config'
@@ -22,7 +21,7 @@ class Znc < Formula
   option 'enable-debug', "Compile ZNC with --enable-debug"
 
   def install
-    args = ["--prefix=#{prefix}", "--enable-extra"]
+    args = ["--prefix=#{prefix}"]
     args << "--enable-debug" if build.include? 'enable-debug'
 
     system "./autogen.sh" if build.head?

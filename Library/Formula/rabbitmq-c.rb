@@ -1,22 +1,24 @@
 require 'formula'
 
 class RabbitmqCodegen < Formula
-  url 'http://github.com/rabbitmq/rabbitmq-codegen/tarball/rabbitmq_v2_8_2'
-  sha1 '628afefe54f6996f7c99ac8c9d5820c5ed2aeaa7'
+  url 'https://github.com/rabbitmq/rabbitmq-codegen/archive/rabbitmq_v3_1_0.tar.gz'
+  sha1 '5b82a3887586804a712aa2c5eeff4a59e89537b7'
 end
 
 class RabbitmqC < Formula
   homepage 'https://github.com/alanxz/rabbitmq-c'
-  url 'https://github.com/alanxz/rabbitmq-c/tarball/v0.1'
-  sha1 '57a1f3e69c36d5766df4b3a567552743b12a91d3'
+  url 'https://github.com/alanxz/rabbitmq-c/archive/rabbitmq-c-v0.3.0.zip'
+  sha1 'bbe8942a5d183512a0406fc516bbe2c8aa2811cc'
 
   head 'https://github.com/alanxz/rabbitmq-c.git'
 
-  depends_on :autoconf
-  depends_on 'rabbitmq'
-  depends_on 'simplejson' => :python if MacOS.version == :leopard
-
   option :universal
+
+  depends_on :autoconf
+  depends_on :automake
+  depends_on :libtool
+  depends_on 'rabbitmq'
+  depends_on 'simplejson' => :python if MacOS.version <= :leopard
 
   def install
     ENV.universal_binary if build.universal?

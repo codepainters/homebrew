@@ -2,8 +2,8 @@ require 'formula'
 
 class Cppcheck < Formula
   homepage 'http://sourceforge.net/apps/mediawiki/cppcheck/index.php?title=Main_Page'
-  url 'https://github.com/danmar/cppcheck/tarball/1.56'
-  sha1 '195e8c819bff51bf2242133851052105a0619bf0'
+  url 'https://github.com/danmar/cppcheck/archive/1.60.1.tar.gz'
+  sha1 '733ee20f5a9f5c991e142dd4ea3bd997a93ddf51'
 
   head 'https://github.com/danmar/cppcheck.git'
 
@@ -20,7 +20,7 @@ class Cppcheck < Formula
     if build.include? 'no-rules'
       system "make", "HAVE_RULES=no"
     else
-      system "make"
+      system "make", "HAVE_RULES=yes"
     end
 
     system "make", "DESTDIR=#{prefix}", "BIN=#{bin}", "install"
@@ -48,9 +48,9 @@ class Cppcheck < Formula
       #{bin}
 
     To link the application to a normal Mac OS X location:
-        brew linkapps
+      brew linkapps
     or:
-        ln -s #{bin}/cppcheck-gui.app /Applications
+      ln -s #{bin}/cppcheck-gui.app /Applications
     EOS
   end
 end

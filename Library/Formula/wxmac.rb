@@ -1,25 +1,25 @@
 require 'formula'
 
 class FrameworkPython < Requirement
-  def message; <<-EOS.undent
-    Python needs to be built as a framework.
-    EOS
-  end
-  def satisfied?
+  fatal true
+
+  satisfy do
     q = `python -c "import distutils.sysconfig as c; print(c.get_config_var('PYTHONFRAMEWORK'))"`
     not q.chomp.empty?
   end
-  def fatal?; true; end
+
+  def message
+    "Python needs to be built as a framework."
+  end
 end
 
 class Wxmac < Formula
   homepage 'http://www.wxwidgets.org'
-  url 'http://sourceforge.net/projects/wxpython/files/wxPython/2.9.4.0/wxPython-src-2.9.4.0.tar.bz2'
+  url 'http://downloads.sourceforge.net/project/wxpython/wxPython/2.9.4.0/wxPython-src-2.9.4.0.tar.bz2'
   sha1 'c292cd45b51e29c558c4d9cacf93c4616ed738b9'
 
-  option 'no-python', 'Do not build Python bindings'
-
-  depends_on FrameworkPython.new unless build.include? "no-python"
+  depends_on :python => :recommended
+  depends_on FrameworkPython if build.with? "python"
 
   def install_wx_python
     args = [
@@ -27,8 +27,9 @@ class Wxmac < Formula
       "WX_CONFIG=#{bin}/wx-config",
       # At this time Wxmac is installed Unicode only
       "UNICODE=1",
-      # And thus we have no need for multiversion support
-      "INSTALL_MULTIVERSION=0",
+      # Some scripts (e.g. matplotlib) expect to `import wxversion`, which is
+      # only available on a multiversion build. Besides that `import wx` still works.
+      "INSTALL_MULTIVERSION=1",
       # OpenGL and stuff
       "BUILD_GLCANVAS=1",
       "BUILD_GIZMOS=1",
@@ -37,15 +38,17 @@ class Wxmac < Formula
     cd "wxPython" do
       ENV.append_to_cflags '-arch x86_64' if MacOS.prefer_64_bit?
 
-      system "python", "setup.py",
+      python do
+        system python, "setup.py",
                        "build_ext",
                        "WXPORT=osx_cocoa",
                        *args
-      system "python", "setup.py",
+        system python, "setup.py",
                        "install",
                        "--prefix=#{prefix}",
                        "WXPORT=osx_cocoa",
                        *args
+      end
     end
   end
 
@@ -74,7 +77,7 @@ class Wxmac < Formula
     system "./configure", *args
     system "make install"
 
-    unless build.include? "no-python"
+    if build.with? "python"
       ENV['WXWIN'] = Dir.getwd
       # We have already downloaded wxPython in a bundle with wxWidgets
       install_wx_python
@@ -84,7 +87,7 @@ class Wxmac < Formula
   def caveats
     s = ''
     fp = FrameworkPython.new
-    unless build.include? 'no-python' or fp.satisfied?
+    unless build.without? 'python' or fp.satisfied?
       s += fp.message
     end
 
