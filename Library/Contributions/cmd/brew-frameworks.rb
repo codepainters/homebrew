@@ -105,9 +105,9 @@ libraries.each { | l |
 			ohai "Something is wrong with #{libname}! Check 'otool -L #{frameworks}/#{libname}.subproj/#{libname}.framework/#{libname}'"
 			exit
 		end
-		system "file #{frameworks}/#{libname}.subproj/#{libname}.framework/Versions/#{f.version}/#{libname} | grep -E --invert-match \"Mach-O fat file with 2 architectures\""
+		system "otool -f #{frameworks}/#{libname}.subproj/#{libname}.framework/Versions/#{f.version}/#{libname} | grep nfat_arch | grep -E --invert-match \"^nfat_arch 2$\""
 		if $? == 0 then
-			ohai "Something is wrong with #{libname}! Check 'file -L #{frameworks}/#{libname}.subproj/#{libname}.framework/Versions/#{f.version}/#{libname}'"
+			ohai "Something is wrong with #{libname}! Check 'file #{frameworks}/#{libname}.subproj/#{libname}.framework/Versions/#{f.version}/#{libname}'"
 			exit
 		end
 	}
