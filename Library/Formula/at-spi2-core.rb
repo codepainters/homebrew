@@ -2,8 +2,8 @@ require 'formula'
 
 class AtSpi2Core < Formula
   homepage 'http://a11y.org'
-  url 'http://ftp.acc.umu.se/pub/GNOME/sources/at-spi2-core/2.6/at-spi2-core-2.6.3.tar.xz'
-  sha256 'fc4487ae46e847cfd057b329b852cf99923772ecd2ddc29f29670c9f2b15d0ea'
+  url 'http://ftp.acc.umu.se/pub/GNOME/sources/at-spi2-core/2.10/at-spi2-core-2.10.0.tar.xz'
+  sha256 '964155c7574220a00e11e1c0d91f2d3017ed603920eb1333ff9cbdb6a22744db'
 
   depends_on 'pkg-config' => :build
   depends_on 'xz' => :build

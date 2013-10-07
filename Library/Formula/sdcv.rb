@@ -3,7 +3,8 @@ require 'formula'
 class Sdcv < Formula
   homepage 'http://sdcv.sourceforge.net/'
   # MacPorts uses this revision and version number
-  url 'https://sdcv.svn.sourceforge.net/svnroot/sdcv/trunk', :revision => '38'
+  url 'https://svn.code.sf.net/p/sdcv/code/trunk',
+    :using => UnsafeSubversionDownloadStrategy, :revision => '38'
   version '0.4.3'
 
   # Always needs a newer autotools, even on Snow Leopard.
@@ -15,7 +16,6 @@ class Sdcv < Formula
   depends_on 'readline'
 
   fails_with :clang do
-    build 421
     cause <<-EOS.undent
       In C++, clang supports variable length arrays in very limited
       circumstances, the element type of a variable length array must

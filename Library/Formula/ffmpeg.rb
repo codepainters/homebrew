@@ -2,10 +2,17 @@ require 'formula'
 
 class Ffmpeg < Formula
   homepage 'http://ffmpeg.org/'
-  url 'http://ffmpeg.org/releases/ffmpeg-1.1.3.tar.bz2'
-  sha1 'd82d6f53c5130ee21dcb87f76bdbdf768d3f0db9'
+  url 'http://ffmpeg.org/releases/ffmpeg-1.2.4.tar.bz2'
+  sha1 'ee73a05bde209fc23441c7e49767c1b7a4b6f124'
 
   head 'git://git.videolan.org/ffmpeg.git'
+
+  # This is actually the new stable, not a devel release,
+  # but not everything builds with it yet - notably gpac
+  devel do
+    url 'http://ffmpeg.org/releases/ffmpeg-2.0.1.tar.bz2'
+    sha1 'cc36c696228221ce14585edd90fb6413d206a5c8'
+  end
 
   option "without-x264", "Disable H.264 encoder"
   option "without-lame", "Disable MP3 encoder"
@@ -15,6 +22,7 @@ class Ffmpeg < Formula
   option "with-libvo-aacenc", "Enable VisualOn AAC encoder"
   option "with-libass", "Enable ASS/SSA subtitle format"
   option "with-openjpeg", 'Enable JPEG 2000 image format'
+  option 'with-openssl', 'Enable SSL support'
   option 'with-schroedinger', 'Enable Dirac video format'
   option 'with-ffplay', 'Enable FFplay media player'
   option 'with-tools', 'Enable additional FFmpeg tools'
@@ -46,6 +54,7 @@ class Ffmpeg < Formula
   depends_on 'fdk-aac' => :optional
   depends_on 'opus' => :optional
   depends_on 'frei0r' => :optional
+  depends_on 'libcaca' => :optional
 
   def install
     args = ["--prefix=#{prefix}",
@@ -56,6 +65,7 @@ class Ffmpeg < Formula
             "--enable-nonfree",
             "--enable-hardcoded-tables",
             "--enable-avresample",
+            "--enable-vda",
             "--cc=#{ENV.cc}",
             "--host-cflags=#{ENV.cflags}",
             "--host-ldflags=#{ENV.ldflags}"
@@ -81,6 +91,7 @@ class Ffmpeg < Formula
     args << "--enable-openssl" if build.with? 'openssl'
     args << "--enable-libopus" if build.with? 'opus'
     args << "--enable-frei0r" if build.with? 'frei0r'
+    args << "--enable-libcaca" if build.with? 'libcaca'
 
     if build.with? 'openjpeg'
       args << '--enable-libopenjpeg'
@@ -89,7 +100,7 @@ class Ffmpeg < Formula
 
     # For 32-bit compilation under gcc 4.2, see:
     # http://trac.macports.org/ticket/20938#comment:22
-    ENV.append_to_cflags "-mdynamic-no-pic" if MacOS.version == :leopard or Hardware.is_32_bit?
+    ENV.append_to_cflags "-mdynamic-no-pic" if Hardware.is_32_bit? && Hardware.cpu_type == :intel && ENV.compiler == :clang
 
     system "./configure", *args
 

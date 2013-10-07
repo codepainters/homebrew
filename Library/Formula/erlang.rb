@@ -1,51 +1,46 @@
 require 'formula'
 
-class ErlangManuals < Formula
-  url 'http://erlang.org/download/otp_doc_man_R16B.tar.gz'
-  sha1 '48eaf215e5dcae8b4f02cc39ed557ec6f9dd026a'
-end
-
-class ErlangHtmls < Formula
-  url 'http://erlang.org/download/otp_doc_html_R16B.tar.gz'
-  sha1 '14729a486f331678d2c7ae1ca1608b7e9f3fd8f2'
-end
-
-class ErlangHeadManuals < Formula
-  url 'http://erlang.org/download/otp_doc_man_R16B.tar.gz'
-  sha1 '48eaf215e5dcae8b4f02cc39ed557ec6f9dd026a'
-end
-
-class ErlangHeadHtmls < Formula
-  url 'http://erlang.org/download/otp_doc_html_R16B.tar.gz'
-  sha1 '14729a486f331678d2c7ae1ca1608b7e9f3fd8f2'
-end
-
+# Major releases of erlang should typically start out as separate formula in
+# Homebrew-versions, and only be merged to master when things like couchdb and
+# elixir are compatible.
 class Erlang < Formula
   homepage 'http://www.erlang.org'
   # Download tarball from GitHub; it is served faster than the official tarball.
-  url 'https://github.com/erlang/otp/archive/OTP_R16B.tar.gz'
-  sha1 '546e8538aa17b8b9212c6cd2ba6781c553c623a5'
+  url 'https://github.com/erlang/otp/archive/OTP_R16B02.tar.gz'
+  sha1 '81f72efe58a99ab1839eb6294935572137133717'
 
-  head 'https://github.com/erlang/otp.git', :branch => 'dev'
+  head 'https://github.com/erlang/otp.git', :branch => 'master'
 
   bottle do
-    sha1 '69f32b53b5b0d1abab749e1316e35cc65e99edaf' => :mountain_lion
-    sha1 'e36c1ac452ff9b2e476bb620296db9182f814efa' => :lion
-    sha1 '37db8ac8b1bedcb820a24773fb31de6e1c967874' => :snow_leopard
+    revision 2
+    sha1 'f2f17d7e0fcfc8281a5a49316db73382e2ed2b77' => :mountain_lion
+    sha1 '8afbd3e03333ca368e5036f48d0bcddeb4a4c8dd' => :lion
+    sha1 'bf967eecc1475e38aa0d5636ffb68563df627c5f' => :snow_leopard
   end
 
-  # remove the autoreconf if possible
-  depends_on :automake
-  depends_on :libtool
+  resource 'man' do
+    url 'http://erlang.org/download/otp_doc_man_R16B02.tar.gz'
+    sha1 'c64c19d5ab176c8b7c1e05b02b4f2affbed7b0ef'
+  end
 
-  fails_with :llvm do
-    build 2334
+  resource 'html' do
+    url 'http://erlang.org/download/otp_doc_html_R16B02.tar.gz'
+    sha1 '142e0b4becc04d3b5bf46a7fa2d48aae43cc84d0'
   end
 
   option 'disable-hipe', "Disable building hipe; fails on various OS X systems"
   option 'halfword', 'Enable halfword emulator (64-bit builds only)'
   option 'time', '`brew test --time` to include a time-consuming test'
   option 'no-docs', 'Do not install documentation'
+
+  depends_on :automake
+  depends_on :libtool
+  depends_on 'unixodbc' if MacOS.version >= :mavericks
+  depends_on 'fop' => :optional # enables building PDF docs
+
+  fails_with :llvm do
+    build 2334
+  end
 
   def install
     ohai "Compilation takes a long time; use `brew install -v erlang` to see progress" unless ARGV.verbose?
@@ -55,6 +50,7 @@ class Erlang < Formula
       ENV.remove_from_cflags /-O./
       ENV.append_to_cflags '-O0'
     end
+    ENV.append "FOP", "#{HOMEBREW_PREFIX}/bin/fop" if build.with? 'fop'
 
     # Do this if building from a checkout to generate configure
     system "./otp_build autoconf" if File.exist? "otp_build"
@@ -67,7 +63,7 @@ class Erlang < Formula
             "--enable-shared-zlib",
             "--enable-smp-support"]
 
-    args << "--with-dynamic-trace=dtrace" unless MacOS.version == :leopard
+    args << "--with-dynamic-trace=dtrace" unless MacOS.version <= :leopard or not MacOS::CLT.installed?
 
     unless build.include? 'disable-hipe'
       # HIPE doesn't strike me as that reliable on OS X
@@ -83,25 +79,30 @@ class Erlang < Formula
 
     system "./configure", *args
     system "make"
-    ENV.j1
+    ENV.j1 # Install is not thread-safe; can try to create folder twice and fail
     system "make install"
 
     unless build.include? 'no-docs'
-      manuals = build.head? ? ErlangHeadManuals : ErlangManuals
-      manuals.new.brew { man.install Dir['man/*'] }
-
-      htmls = build.head? ? ErlangHeadHtmls : ErlangHtmls
-      htmls.new.brew { doc.install Dir['*'] }
+      (lib/'erlang').install resource('man').files('man')
+      doc.install resource('html')
     end
+  end
+
+  def caveats; <<-EOS.undent
+    Man pages can be found in:
+      #{opt_prefix}/lib/erlang/man
+
+    Access them with `erl -man`, or add this directory to MANPATH.
+    EOS
   end
 
   def test
     `#{bin}/erl -noshell -eval 'crypto:start().' -s init stop`
 
     # This test takes some time to run, but per bug #120 should finish in
-    # "less than 20 minutes". It takes a few minutes on a Mac Pro (2009).
-    if build.include? "time"
-      `#{bin}/dialyzer --build_plt -r #{lib}/erlang/lib/kernel-2.15/ebin/`
+    # "less than 20 minutes". It takes about 20 seconds on a Mac Pro (2009).
+    if build.include?("time") && !build.head?
+      `#{bin}/dialyzer --build_plt -r #{lib}/erlang/lib/kernel-2.16.3/ebin/`
     end
   end
 end

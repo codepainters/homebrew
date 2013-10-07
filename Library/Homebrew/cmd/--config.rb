@@ -56,7 +56,7 @@ module Homebrew extend self
 
   def origin
     origin = HOMEBREW_REPOSITORY.cd do
-      `git config --get remote.origin.url`.chomp
+      `git config --get remote.origin.url 2>/dev/null`.chomp
     end
     if origin.empty? then "(none)" else origin end
   end
@@ -69,7 +69,7 @@ module Homebrew extend self
 
   def describe_x11
     return "N/A" unless MacOS::XQuartz.installed?
-    return "#{MacOS::XQuartz.version} => " + describe_path(MacOS::XQuartz.prefix)
+    return "#{MacOS::XQuartz.version} => #{describe_path(MacOS::XQuartz.prefix)}"
   end
 
   def describe_perl
@@ -85,7 +85,7 @@ module Homebrew extend self
   end
 
   def hardware
-    "CPU: #{Hardware.cores_as_words}-core #{Hardware.bits}-bit #{Hardware.intel_family}"
+    "CPU: #{Hardware.cores_as_words}-core #{Hardware::CPU.bits}-bit #{Hardware::CPU.family}"
   end
 
   def kernel
@@ -107,7 +107,7 @@ module Homebrew extend self
     puts "OS X: #{MACOS_FULL_VERSION}-#{kernel}"
     puts "Xcode: #{xcode}" if xcode
     puts "CLT: #{clt}" if clt
-    puts "/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/bin/ruby:\n  #{RUBY_VERSION}-#{RUBY_PATCHLEVEL}" if RUBY_VERSION.to_f != 1.8
+    puts "#{RUBY_PATH}:\n  #{RUBY_VERSION}-#{RUBY_PATCHLEVEL}" if RUBY_VERSION.to_f != 1.8
 
     unless MacOS.compilers_standard?
       puts "GCC-4.0: build #{gcc_40}" if gcc_40

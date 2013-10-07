@@ -1,41 +1,20 @@
 require 'formula'
 
-class UniversalPcre < Requirement
-  fatal true
-
-  satisfy :build_env => false do
-    f = Formula.factory('pcre')
-    f.installed? && archs_for_command(f.lib/'libpcre.dylib').universal?
-  end
-
-  def message; <<-EOS.undent
-    pcre must be build universal for uwsgi to work.
-    You will need to:
-      brew rm pcre
-      brew install --universal pcre
-    EOS
-  end
-end
-
 class Uwsgi < Formula
   homepage 'http://projects.unbit.it/uwsgi/'
-  url 'http://projects.unbit.it/downloads/uwsgi-1.4.8.tar.gz'
-  sha1 '476f8c474c021f0c91160309c41ad601ca2f824b'
+  url 'https://projects.unbit.it/downloads/uwsgi-1.9.14.tar.gz'
+  sha1 '81e89b96f627c2d2c94224c2403cbd09fefa32f0'
 
-  depends_on UniversalPcre
+  depends_on :python
   depends_on 'pcre'
+  depends_on 'libyaml'
 
   def install
-    # Find the arch for the Python we are building against.
-    # We remove 'ppc' support, so we can pass Intel-optimized CFLAGS.
-    archs = archs_for_command("python")
-    archs.remove_ppc!
-    arch_flags = archs.as_arch_flags
+    python do
+      %w{CFLAGS LDFLAGS}.each { |e| ENV.append e, "-arch #{MacOS.preferred_arch}" }
 
-    ENV.append 'CFLAGS', arch_flags
-    ENV.append 'LDFLAGS', arch_flags
-
-    system "python", "uwsgiconfig.py", "--build"
-    bin.install "uwsgi"
+      system python, "uwsgiconfig.py", "--build"
+      bin.install "uwsgi"
+    end
   end
 end

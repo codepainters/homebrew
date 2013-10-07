@@ -2,8 +2,11 @@ require 'formula'
 
 class IosSim < Formula
   homepage 'https://github.com/phonegap/ios-sim'
-  url 'https://github.com/phonegap/ios-sim/tarball/1.6'
-  sha1 '60f9e007384ccc0a8c36ad4bd02e22f0c48104b1'
+  url 'https://github.com/phonegap/ios-sim/archive/1.8.2.tar.gz'
+  sha1 '4328b3c8e6b455631d52b7ce5968170c9769eb1e'
+  head 'https://github.com/phonegap/ios-sim.git'
+
+  depends_on :macos => :lion
 
   def install
     rake "install", "prefix=#{prefix}"

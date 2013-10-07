@@ -2,8 +2,8 @@ require 'formula'
 
 class Glib < Formula
   homepage 'http://developer.gnome.org/glib/'
-  url 'http://ftp.gnome.org/pub/gnome/sources/glib/2.34/glib-2.34.3.tar.xz'
-  sha256 '855fcbf87cb93065b488358e351774d8a39177281023bae58c286f41612658a7'
+  url 'http://ftp.gnome.org/pub/gnome/sources/glib/2.38/glib-2.38.0.tar.xz'
+  sha256 '7513a7de5e814ccb48206340a8773ea523d6a7bf04dc74565de69b899bc2ff32'
 
   option :universal
   option 'test', 'Build a debug build and run tests. NOTE: Not all tests succeed yet'
@@ -18,14 +18,27 @@ class Glib < Formula
     cause "Undefined symbol errors while linking"
   end
 
+  resource 'config.h.ed' do
+    url 'https://trac.macports.org/export/111532/trunk/dports/devel/glib2/files/config.h.ed'
+    version '111532'
+    sha1 '0926f19d62769dfd3ff91a80ade5eff2c668ec54'
+  end if build.universal?
+
   def patches
-    # https://bugzilla.gnome.org/show_bug.cgi?id=673135 Resolved as wontfix.
-    p = { :p1 => %W[
-      https://raw.github.com/gist/3924879/f86903e0aea1458448507305d01b06a7d878c041/glib-configurable-paths.patch
-    ]}
-    p[:p0] = %W[
-        https://trac.macports.org/export/95596/trunk/dports/devel/glib2/files/patch-configure.diff
-    ] if build.universal?
+    p = {}
+    # https://bugzilla.gnome.org/show_bug.cgi?id=673135 Resolved as wontfix,
+    # but needed to fix an assumption about the location of the d-bus machine
+    # id file.
+    p[:p1] = []
+    p[:p1] << "https://gist.github.com/jacknagel/6700436/raw/a94f21a9c5ccd10afa0a61b11455c880640f3133/glib-configurable-paths.patch"
+
+    # Upstream patches to fix various compilation issues, should be in 2.38.1
+    p[:p1] << "https://git.gnome.org/browse/glib/patch/?id=92f6cbf5286037fd6bf276370da73635c703fe69"
+    p[:p1] << "https://git.gnome.org/browse/glib/patch/?id=55e6a475b6042298f46297f680247e5ac6f89262"
+    p[:p1] << "https://git.gnome.org/browse/glib/patch/?id=7c8dcd32b91710a3c5fc089c35f228b260e86359"
+    p[:p1] << "https://git.gnome.org/browse/glib/patch/?id=8372f22b26c929e25f1868f4aeacf938b671b2cb"
+
+    p[:p0] = "https://trac.macports.org/export/111532/trunk/dports/devel/glib2/files/patch-configure.diff" if build.universal?
     p
   end
 
@@ -47,8 +60,10 @@ class Glib < Formula
     args = %W[
       --disable-maintainer-mode
       --disable-dependency-tracking
+      --disable-silent-rules
       --disable-dtrace
       --disable-modular-tests
+      --disable-libelf
       --prefix=#{prefix}
       --localstatedir=#{var}
       --disable-static
@@ -58,12 +73,14 @@ class Glib < Formula
       --disable-selinux
       --with-threads=posix
       --disable-visibility
+      --with-gio-module-dir=#{HOMEBREW_PREFIX}/lib/gio/modules
     ]
 
     system "./configure", *args
 
     if build.universal?
-      system "curl 'https://trac.macports.org/export/95596/trunk/dports/devel/glib2/files/config.h.ed' | ed - config.h"
+      buildpath.install resource('config.h.ed')
+      system "ed -s - config.h <config.h.ed"
     end
 
     system "make"
@@ -75,13 +92,12 @@ class Glib < Formula
     # system, but pkg-config or glib is not smart enough to have determined
     # that libintl.dylib isn't in the DYLIB_PATH so we have to add it
     # manually.
-    gettext = Formula.factory('gettext')
+    gettext = Formula.factory('gettext').opt_prefix
     inreplace lib+'pkgconfig/glib-2.0.pc' do |s|
       s.gsub! 'Libs: -L${libdir} -lglib-2.0 -lintl',
-              "Libs: -L${libdir} -lglib-2.0 -L#{gettext.lib} -lintl"
-
+              "Libs: -L${libdir} -lglib-2.0 -L#{gettext}/lib -lintl"
       s.gsub! 'Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include',
-              "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext.include}"
+              "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext}/include"
     end
 
     (share+'gtk-doc').rmtree
@@ -103,8 +119,7 @@ class Glib < Formula
           return (strcmp(str, result_2) == 0) ? 0 : 1;
       }
       EOS
-    flags = *`pkg-config --cflags --libs glib-2.0`.split
-    flags += ENV.cflags.split
+    flags = `pkg-config --cflags --libs glib-2.0`.split + ENV.cflags.split
     system ENV.cc, "-o", "test", "test.c", *flags
     system "./test"
   end

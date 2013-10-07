@@ -2,11 +2,13 @@ require 'formula'
 
 class Elasticsearch < Formula
   homepage 'http://www.elasticsearch.org'
-  url 'http://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.20.5.tar.gz'
-  sha1 'e52cd5e7cae2be85d7df65315ec7b91e2e84f83e'
-  head 'https://github.com/elasticsearch/elasticsearch.git'
+  url 'https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.tar.gz'
+  sha1 '8027a4ae1bef6876c7651b1590607c8ff6108820'
 
-  depends_on 'maven' if build.head?
+  head do
+    url 'https://github.com/elasticsearch/elasticsearch.git'
+    depends_on 'maven'
+  end
 
   def cluster_name
     "elasticsearch_#{ENV['USER']}"
@@ -67,6 +69,13 @@ class Elasticsearch < Formula
     end
   end
 
+  def post_install
+    # Make sure runtime directories exist
+    (var/"elasticsearch/#{cluster_name}").mkpath
+    (var/"log/elasticsearch").mkpath
+    (var/"lib/elasticsearch/plugins").mkpath
+  end
+
   def caveats; <<-EOS.undent
     Data:    #{var}/elasticsearch/#{cluster_name}/
     Logs:    #{var}/log/elasticsearch/#{cluster_name}.log
@@ -98,8 +107,6 @@ class Elasticsearch < Formula
           </dict>
           <key>RunAtLoad</key>
           <true/>
-          <key>UserName</key>
-          <string>#{ENV['USER']}</string>
           <key>WorkingDirectory</key>
           <string>#{var}</string>
           <key>StandardErrorPath</key>

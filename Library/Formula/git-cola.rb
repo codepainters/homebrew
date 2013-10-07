@@ -1,14 +1,15 @@
 require 'formula'
 
 class GitCola < Formula
-  homepage 'http://git-cola.github.com/'
-  url 'https://github.com/git-cola/git-cola/tarball/v1.8.1'
-  sha1 '125055ac18f30aa25bf9f0874b888659233ab22e'
+  homepage 'http://git-cola.github.io/'
+  url 'https://github.com/git-cola/git-cola/archive/v1.8.5.tar.gz'
+  sha1 '8fa48f2889715a9cb5dc7bdd9bf3ab0140f161be'
 
   head 'https://github.com/git-cola/git-cola.git'
 
   option 'with-docs', "Build man pages using asciidoc and xmlto"
 
+  depends_on :python
   depends_on 'pyqt'
 
   if build.include? 'with-docs'
@@ -18,18 +19,17 @@ class GitCola < Formula
   end
 
   def install
-    ENV.prepend 'PYTHONPATH', "#{HOMEBREW_PREFIX}/lib/#{which_python}/site-packages", ':'
-    system "make", "prefix=#{prefix}", "install"
+    python do
+      # The python do block creates the PYTHONPATH and temp. site-packages
+      system "make", "prefix=#{prefix}", "install"
 
-    if build.include? 'with-docs'
-      system "make", "-C", "share/doc/git-cola",
-                     "-f", "Makefile.asciidoc",
-                     "prefix=#{prefix}",
-                     "install", "install-html"
+      if build.include? 'with-docs'
+        system "make", "-C", "share/doc/git-cola",
+                       "-f", "Makefile.asciidoc",
+                       "prefix=#{prefix}",
+                       "install", "install-html"
+      end
     end
   end
 
-  def which_python
-    "python" + `python -c 'import sys;print(sys.version[:3])'`.strip
-  end
 end
