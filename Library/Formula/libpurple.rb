@@ -1,9 +1,9 @@
 require 'formula'
 
 class Libpurple < Formula
-  head 'https://hg.adium.im/libpurple/', :using => :hg, :revision => 'c8e809dffa1d'
-  url 'https://hg.adium.im/libpurple/archive/c8e809dffa1d.tar.gz'
-  sha1 '7d9e8fed659d648faf9c51aeec088809a3b66822'
+  head 'https://hg.adium.im/libpurple/', :using => :hg, :revision => 'a97104490e3e'
+  url 'https://hg.adium.im/libpurple/archive/a97104490e3e.tar.gz'
+  sha1 '7a29c105c858a8f99032dd0dc8b00b2c5e25c547'
   homepage 'http://pidgin.im/'
   version '2.10.7rc8e809dffa1d'
 
