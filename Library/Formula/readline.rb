@@ -9,9 +9,10 @@ class Readline < Formula
 
   bottle do
     cellar :any
-    sha1 '62b50f08ea14b06bfbf4799b62084db4017d0052' => :mountain_lion
-    sha1 '55632e89006438e090603f06c59055928c0e682c' => :lion
-    sha1 'fc90fd8569bccfdd41567ceb9ab03640113949e7' => :snow_leopard
+    revision 2
+    sha1 'cce49ed4db5ae8065e40468bc8747042f41ed266' => :mavericks
+    sha1 'fea45780c788a92108f7ca2d9296dca0c3498579' => :mountain_lion
+    sha1 'b4aada7512f8b19eb120c0550cb793b48e8b7057' => :lion
   end
 
   keg_only <<-EOS

@@ -9,6 +9,7 @@ require 'bottles'
 require 'caveats'
 require 'cleaner'
 require 'formula_cellar_checks'
+require 'install_renamed'
 
 class FormulaInstaller
   include FormulaCellarChecks
@@ -16,6 +17,7 @@ class FormulaInstaller
   attr_reader :f
   attr_accessor :tab, :options, :ignore_deps
   attr_accessor :show_summary_heading, :show_header
+  attr_reader :unsatisfied_deps
 
   def initialize ff
     @f = ff
@@ -23,6 +25,7 @@ class FormulaInstaller
     @ignore_deps = ARGV.ignore_deps? || ARGV.interactive?
     @options = Options.new
     @tab = Tab.dummy_tab(ff)
+    @unsatisfied_deps = []
 
     @@attempted ||= Set.new
 
@@ -31,6 +34,7 @@ class FormulaInstaller
   end
 
   def pour_bottle? install_bottle_options={:warn=>false}
+    return false if @pour_failed
     tab.used_options.empty? && options.empty? && \
       install_bottle?(f, install_bottle_options)
   end
@@ -72,55 +76,15 @@ class FormulaInstaller
     raise
   end
 
-  def git_etc_preinstall
-    return unless quiet_system 'git', '--version'
-
-    etc = HOMEBREW_PREFIX+'etc'
-    etc.cd do
-      quiet_system 'git', 'init' unless (etc+'.git').directory?
-      quiet_system 'git', 'checkout', '-B', "#{f.name}-last"
-      system 'git', 'add', '--all', '.'
-      system 'git', 'commit', '-m', "#{f.name}-#{f.version}: preinstall"
-    end
+  def build_bottle_preinstall
+    @etc_var_glob ||= "#{HOMEBREW_PREFIX}/{etc,var}/**/*"
+    @etc_var_preinstall = Dir[@etc_var_glob]
   end
 
-  def git_etc_postinstall
-    return unless quiet_system 'git', '--version'
-
-    etc = HOMEBREW_PREFIX+'etc'
-    keg_etc_files = Dir[f.etc+'*']
-    last_branch = "#{f.name}-last"
-    default_branch = "#{f.name}-default"
-    merged = false
-    etc.cd do
-      FileUtils.cp_r keg_etc_files, etc
-
-      system 'git', 'add', '--all', '.'
-      if quiet_system 'git', 'diff', '--exit-code', default_branch
-        quiet_system 'git', 'reset', '--hard'
-      else
-        if quiet_system 'git', 'rev-parse', 'master'
-          quiet_system 'git', 'checkout', '-f', 'master'
-          FileUtils.cp_r keg_etc_files, etc
-          quiet_system 'git', 'add', '--all', '.'
-        else
-          quiet_system 'git', 'checkout', '-b' 'master'
-        end
-        system 'git', 'commit', '-m', "#{f.name}-#{f.version}: default"
-        quiet_system 'git', 'branch', '-f', default_branch
-
-        merged = true unless quiet_system 'git' 'merge-base', '--is-ancestor',
-                                          last_branch, 'master'
-        system 'git', 'merge', '--no-ff', '--no-edit',
-               '-X', 'theirs', last_branch
-      end
-
-      if merged
-        ohai "Configuration Files"
-        puts "Your configuration files for #{f.name} in etc were merged:"
-        puts "To reverse this merge: git reset --hard #{last_branch}"
-        puts "To restore defaults:   git reset --hard #{default_branch}"
-      end
+  def build_bottle_postinstall
+    @etc_var_postinstall = Dir[@etc_var_glob]
+    (@etc_var_postinstall - @etc_var_preinstall).each do |file|
+      Pathname.new(file).cp_path_sub(HOMEBREW_PREFIX, f.bottle_prefix)
     end
   end
 
@@ -138,31 +102,15 @@ class FormulaInstaller
 
     check_conflicts
 
-    unless ignore_deps
-      perform_readline_hack
-      check_requirements
-      install_dependencies
-    end
+    compute_and_install_dependencies unless ignore_deps
 
     if ARGV.build_bottle? && (arch = ARGV.bottle_arch) && !Hardware::CPU.optimization_flags.include?(arch)
       raise "Unrecognized architecture for --bottle-arch: #{arch}"
     end
 
-    if pour_bottle?
-      # This assumes that bottles are built with
-      # a) the OS's default compiler, and
-      # b) the OS's default C++ stdlib
-      # This is probably accurate, but could possibly stand to be
-      # more robust.
-      stdlib_in_use = CxxStdlib.new(MacOS.default_cxx_stdlib, MacOS.default_compiler)
-      stdlib_in_use.check_dependencies(f, f.deps)
-    end
-
     oh1 "Installing #{Tty.green}#{f}#{Tty.reset}" if show_header
 
     @@attempted << f
-
-    git_etc_preinstall if HOMEBREW_GIT_ETC
 
     @poured_bottle = false
 
@@ -170,28 +118,31 @@ class FormulaInstaller
       if pour_bottle? :warn => true
         pour
         @poured_bottle = true
+
+        stdlibs = Keg.new(f.prefix).detect_cxx_stdlibs
+        stdlib_in_use = CxxStdlib.new(stdlibs.first, MacOS.default_compiler)
+        stdlib_in_use.check_dependencies(f, f.recursive_dependencies)
+
         tab = Tab.for_keg f.prefix
         tab.poured_from_bottle = true
-        tab.tabfile.delete rescue nil
+        tab.tabfile.delete if tab.tabfile
         tab.write
       end
     rescue
       raise if ARGV.homebrew_developer?
+      @pour_failed = true
       opoo "Bottle installation failed: building from source."
     end
 
+    build_bottle_preinstall if ARGV.build_bottle?
+
     unless @poured_bottle
+      compute_and_install_dependencies if @pour_failed and not ignore_deps
       build
       clean
     end
 
-    begin
-      f.post_install
-    rescue
-      opoo "#{f.name} post_install failed. Rerun with `brew postinstall #{f.name}`."
-    end
-
-    git_etc_postinstall if HOMEBREW_GIT_ETC
+    build_bottle_postinstall if ARGV.build_bottle?
 
     opoo "Nothing was installed to #{f.prefix}" unless f.installed?
   end
@@ -215,6 +166,12 @@ class FormulaInstaller
     raise FormulaConflictError.new(f, conflicts) unless conflicts.empty?
   end
 
+  def compute_and_install_dependencies
+    perform_readline_hack
+    check_requirements
+    install_dependencies
+  end
+
   def check_requirements
     unsatisfied = ARGV.filter_for_dependencies do
       f.recursive_requirements do |dependent, req|
@@ -225,7 +182,7 @@ class FormulaInstaller
         elsif req.satisfied?
           Requirement.prune
         elsif req.default_formula?
-          dependent.deps << req.to_dependency
+          unsatisfied_deps << req.to_dependency
           Requirement.prune
         else
           puts "#{dependent}: #{req.message}"
@@ -275,20 +232,23 @@ class FormulaInstaller
     f.recursive_dependencies.select { |d| deps.include? d }
   end
 
-  def effective_deps
-    @effective_deps ||= filter_deps
-  end
-
   def install_dependencies
-    oh1 "Installing dependencies for #{f}: #{Tty.green}#{effective_deps.join(", ")}#{Tty.reset}" if not effective_deps.empty?
-    effective_deps.each do |dep|
+    unsatisfied_deps.concat(filter_deps)
+
+    if unsatisfied_deps.length > 1
+      oh1 "Installing dependencies for #{f}: #{Tty.green}#{unsatisfied_deps*", "}#{Tty.reset}"
+    end
+
+    unsatisfied_deps.each do |dep|
       if dep.requested?
        install_dependency(dep)
       else
         ARGV.filter_for_dependencies { install_dependency(dep) }
       end
     end
-    @show_header = true unless effective_deps.empty?
+    @show_header = true unless unsatisfied_deps.empty?
+  ensure
+    unsatisfied_deps.clear
   end
 
   def install_dependency dep
@@ -346,13 +306,13 @@ class FormulaInstaller
       link
     end
 
-    fix_install_names
+    fix_install_names if OS.mac?
 
-    record_cxx_stdlib
+    post_install
 
     ohai "Summary" if ARGV.verbose? or show_summary_heading
     unless ENV['HOMEBREW_NO_EMOJI']
-      print "\xf0\x9f\x8d\xba  " if MacOS.version >= :lion
+      print "#{ENV['HOMEBREW_INSTALL_BADGE'] || "\xf0\x9f\x8d\xba"}  " if MacOS.version >= :lion
     end
     print "#{f.prefix}: #{f.prefix.abv}"
     print ", built in #{pretty_duration build_time}" if build_time
@@ -471,17 +431,12 @@ class FormulaInstaller
   end
 
   def fix_install_names
-    Keg.new(f.prefix).fix_install_names(:keg_only => f.keg_only?)
-    if @poured_bottle and f.bottle
-      old_prefix = f.bottle.prefix
-      new_prefix = HOMEBREW_PREFIX.to_s
-      old_cellar = f.bottle.cellar
-      new_cellar = HOMEBREW_CELLAR.to_s
+    keg = Keg.new(f.prefix)
+    keg.fix_install_names(:keg_only => f.keg_only?)
 
-      if old_prefix != new_prefix or old_cellar != new_cellar
-        Keg.new(f.prefix).relocate_install_names \
-          old_prefix, new_prefix, old_cellar, new_cellar, :keg_only => f.keg_only?
-      end
+    if @poured_bottle
+      keg.relocate_install_names Keg::PREFIX_PLACEHOLDER, HOMEBREW_PREFIX.to_s,
+        Keg::CELLAR_PLACEHOLDER, HOMEBREW_CELLAR.to_s, :keg_only => f.keg_only?
     end
   rescue Exception => e
     onoe "Failed to fix install names"
@@ -489,18 +444,6 @@ class FormulaInstaller
     puts "formula against it."
     ohai e, e.backtrace if ARGV.debug?
     @show_summary_heading = true
-  end
-
-  def record_cxx_stdlib
-    stdlibs = Keg.new(f.prefix).detect_cxx_stdlibs
-    return if stdlibs.empty?
-
-    tab = Tab.for_formula(f)
-    tab.tabfile.unlink
-    # It's technically possible for the same lib to link to multiple C++ stdlibs,
-    # but very bad news. Right now we don't track this woeful scenario.
-    tab.stdlib = stdlibs.first
-    tab.write
   end
 
   def clean
@@ -521,6 +464,15 @@ class FormulaInstaller
     @show_summary_heading = true
   end
 
+  def post_install
+    f.post_install
+  rescue Exception => e
+    opoo "The post-install step did not complete successfully"
+    puts "You can try again using `brew postinstall #{f.name}`"
+    ohai e, e.backtrace if ARGV.debug?
+    @show_summary_heading = true
+  end
+
   def pour
     if f.local_bottle_path
       downloader = LocalBottleDownloadStrategy.new(f)
@@ -532,6 +484,13 @@ class FormulaInstaller
     HOMEBREW_CELLAR.cd do
       downloader.stage
     end
+
+    Dir["#{f.bottle_prefix}/{etc,var}/**/*"].each do |file|
+      path = Pathname.new(file)
+      path.extend(InstallRenamed)
+      path.cp_path_sub(f.bottle_prefix, HOMEBREW_PREFIX)
+    end
+    FileUtils.rm_rf f.bottle_prefix
   end
 
   ## checks
@@ -547,11 +506,13 @@ class FormulaInstaller
   def audit_bin
     print_check_output(check_PATH(f.bin)) unless f.keg_only?
     print_check_output(check_non_executables(f.bin))
+    print_check_output(check_generic_executables(f.bin))
   end
 
   def audit_sbin
     print_check_output(check_PATH(f.sbin)) unless f.keg_only?
     print_check_output(check_non_executables(f.sbin))
+    print_check_output(check_generic_executables(f.sbin))
   end
 
   def audit_lib
@@ -596,7 +557,7 @@ end
 
 class Formula
   def keg_only_text
-    s = "This formula is keg-only: so it was not symlinked into #{HOMEBREW_PREFIX}."
+    s = "This formula is keg-only, so it was not symlinked into #{HOMEBREW_PREFIX}."
     s << "\n\n#{keg_only_reason.to_s}"
     if lib.directory? or include.directory?
       s <<

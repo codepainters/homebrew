@@ -9,22 +9,21 @@ class Libgcrypt < Formula
 
   option :universal
 
+  resource 'config.h.ed' do
+    url 'http://trac.macports.org/export/113198/trunk/dports/devel/libgcrypt/files/config.h.ed'
+    version '113198'
+    sha1 '136f636673b5c9d040f8a55f59b430b0f1c97d7a'
+  end if build.universal?
+
   fails_with :clang do
     build 77
     cause "basic test fails"
   end
 
   def patches
-    if ENV.compiler == :clang
-      {:p0 =>
-      "https://trac.macports.org/export/85232/trunk/dports/devel/libgcrypt/files/clang-asm.patch"}
+    if ENV.compiler == :clang and (build.universal? or build.build_32_bit?)
+      { :p0 => "https://trac.macports.org/export/85232/trunk/dports/devel/libgcrypt/files/clang-asm.patch" }
     end
-  end
-
-  def cflags
-    cflags = ENV.cflags.to_s
-    cflags += ' -std=gnu89 -fheinous-gnu-extensions' if ENV.compiler == :clang
-    cflags
   end
 
   def install
@@ -38,17 +37,24 @@ class Libgcrypt < Formula
     ENV.append_to_cflags("-D_FORTIFY_SOURCE=2")
     ENV.append_to_cflags("-fstack-protector-all")
     ENV.append_to_cflags("-arch i386 -arch x86_64")
+    ENV.append 'CFLAGS', '-std=gnu89 -fheinous-gnu-extensions' if ENV.compiler == :clang
 
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--disable-asm",
                           "--with-gpg-error-prefix=#{HOMEBREW_PREFIX}"
+
+    if build.universal?
+      buildpath.install resource('config.h.ed')
+      system "ed -s - config.h <config.h.ed"
+    end
+
     # Parallel builds work, but only when run as separate steps
     if build.universal?
       system "curl 'https://trac.macports.org/export/56608/trunk/dports/devel/libgcrypt/files/config.h.ed' | ed - config.h"
     end
 
-    system "make", "CFLAGS=#{cflags}"
+    system "make", "CFLAGS=#{ENV.cflags}"
     system "make check"
     system "make install"
   end

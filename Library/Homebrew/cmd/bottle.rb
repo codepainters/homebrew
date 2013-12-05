@@ -5,6 +5,8 @@ require 'keg'
 require 'cmd/versions'
 require 'utils/inreplace'
 require 'erb'
+require 'open3'
+require 'extend/pathname'
 
 class BottleMerger < Formula
   # This provides a URL and Version which are the only needed properties of
@@ -42,7 +44,46 @@ module Homebrew extend self
   end
 
   def keg_contains string, keg
-    quiet_system 'fgrep', '--recursive', '--quiet', '--max-count=1', string, keg
+    if not ARGV.homebrew_developer?
+      return quiet_system 'fgrep', '--recursive', '--quiet', '--max-count=1', string, keg
+    end
+
+    # Find all files that still reference the keg via a string search
+    keg_ref_files = `/usr/bin/fgrep --files-with-matches --recursive "#{string}" "#{keg}" 2>/dev/null`
+    keg_ref_files = (keg_ref_files.map{ |file| Pathname.new(file.strip) }).reject(&:symlink?)
+
+    # If there are no files with that string found, return immediately
+    return false if keg_ref_files.empty?
+
+    # Start printing out each file and any extra information we can find
+    opoo "String '#{string}' still exists in these files:"
+    keg_ref_files.each do |file|
+      puts "#{Tty.red}#{file}#{Tty.reset}"
+
+      # If we can't use otool on this file, just skip to the next file
+      next if not file.mach_o_executable? and not file.mach_o_bundle? and not file.dylib? and not file.extname == '.a'
+
+      # Get all libraries this file links to, then display only links to libraries that contain string in the path
+      linked_libraries = `otool -L "#{file}"`.split("\n").drop(1)
+      linked_libraries.map!{ |lib| lib.strip.split()[0] }
+      linked_libraries = linked_libraries.select{ |lib| lib.include? string }
+
+      linked_libraries.each do |lib|
+        puts " #{Tty.gray}-->#{Tty.reset} links to #{lib}"
+      end
+
+      # Use strings to search through the file for each string
+      strings = `strings -t x - "#{file}"`.select{ |str| str.include? string }.map{ |s| s.strip }
+
+      # Don't bother reporting a string if it was found by otool
+      strings.reject!{ |str| linked_libraries.include? str.split[1] }
+      strings.each do |str|
+        offset, match = str.split
+        puts " #{Tty.gray}-->#{Tty.reset} match '#{match}' at offset #{Tty.em}0x#{offset}#{Tty.reset}"
+      end
+    end
+    puts
+    true
   end
 
   def bottle_output bottle
@@ -75,42 +116,44 @@ module Homebrew extend self
     sha1 = nil
 
     prefix = HOMEBREW_PREFIX.to_s
-    tmp_prefix = '/tmp'
     cellar = HOMEBREW_CELLAR.to_s
-    tmp_cellar = '/tmp/Cellar'
 
     output = nil
 
     HOMEBREW_CELLAR.cd do
       ohai "Bottling #{filename}..."
-      # Use gzip, faster to compress than bzip2, faster to uncompress than bzip2
-      # or an uncompressed tarball (and more bandwidth friendly).
-      safe_system 'tar', 'czf', bottle_path, "#{f.name}/#{f.version}"
-      sha1 = bottle_path.sha1
+
+      keg = Keg.new(f.prefix)
       relocatable = false
 
-      if File.size?(bottle_path) > 1*1024*1024
-        ohai "Detecting if #{filename} is relocatable..."
-      end
-      keg = Keg.new f.prefix
       keg.lock do
-        # Relocate bottle library references before testing for built-in
-        # references to the Cellar e.g. Qt's QMake annoyingly does this.
-        keg.relocate_install_names prefix, tmp_prefix, cellar, tmp_cellar, :keg_only => f.keg_only?
+        begin
+          keg.relocate_install_names prefix, Keg::PREFIX_PLACEHOLDER,
+            cellar, Keg::CELLAR_PLACEHOLDER, :keg_only => f.keg_only?
 
-        if prefix == '/usr/local'
-          prefix_check = HOMEBREW_PREFIX/'opt'
-        else
-          prefix_check = HOMEBREW_PREFIX
+          # Use gzip, faster to compress than bzip2, faster to uncompress than bzip2
+          # or an uncompressed tarball (and more bandwidth friendly).
+          safe_system 'tar', 'czf', bottle_path, "#{f.name}/#{f.version}"
+
+          if File.size?(bottle_path) > 1*1024*1024
+            ohai "Detecting if #{filename} is relocatable..."
+          end
+
+          if prefix == '/usr/local'
+            prefix_check = HOMEBREW_PREFIX/'opt'
+          else
+            prefix_check = HOMEBREW_PREFIX
+          end
+
+          relocatable = !keg_contains(prefix_check, keg)
+          relocatable = !keg_contains(HOMEBREW_CELLAR, keg) if relocatable
+        ensure
+          keg.relocate_install_names Keg::PREFIX_PLACEHOLDER, prefix,
+            Keg::CELLAR_PLACEHOLDER, cellar, :keg_only => f.keg_only?
         end
-
-        relocatable = !keg_contains(prefix_check, keg)
-        relocatable = !keg_contains(HOMEBREW_CELLAR, keg) if relocatable
-
-        # And do the same thing in reverse to change the library references
-        # back to how they were.
-        keg.relocate_install_names tmp_prefix, prefix, tmp_cellar, cellar
       end
+
+      sha1 = bottle_path.sha1
 
       bottle = Bottle.new
       bottle.prefix HOMEBREW_PREFIX
@@ -153,19 +196,22 @@ module Homebrew extend self
 
       if ARGV.include? '--write'
         f = Formula.factory formula_name
-        formula_path = HOMEBREW_REPOSITORY+"Library/Formula/#{f.name}.rb"
+        formula_relative_path = "Library/Formula/#{f.name}.rb"
+        formula_path = HOMEBREW_REPOSITORY+formula_relative_path
+        has_bottle_block = f.class.send(:bottle).checksums.any?
         inreplace formula_path do |s|
-          if f.bottle
-            s.gsub!(/  bottle do.+?end\n/m, output)
+          if has_bottle_block
+            s.sub!(/  bottle do.+?end\n/m, output)
           else
-            s.gsub!(/(  (url|sha1|head|version) '\S*'\n+)+/m, '\0' + output + "\n")
+            s.sub!(/(  (url|sha1|head|version) '\S*'\n+)+/m, '\0' + output + "\n")
           end
         end
 
-        update_or_add = f.bottle.nil? ? 'add' : 'update'
+        update_or_add = has_bottle_block ? 'update' : 'add'
 
-        safe_system 'git', 'commit', formula_path, '-m',
-          "#{f.name}: #{update_or_add} bottle."
+        safe_system 'git', 'commit', '--no-edit', '--verbose',
+          "--message=#{f.name}: #{update_or_add} #{f.version} bottle.",
+          '--', formula_path
       end
     end
     exit 0

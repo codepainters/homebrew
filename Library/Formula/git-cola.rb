@@ -2,8 +2,8 @@ require 'formula'
 
 class GitCola < Formula
   homepage 'http://git-cola.github.io/'
-  url 'https://github.com/git-cola/git-cola/archive/v1.8.5.tar.gz'
-  sha1 '8fa48f2889715a9cb5dc7bdd9bf3ab0140f161be'
+  url 'https://github.com/git-cola/git-cola/archive/v1.9.2.tar.gz'
+  sha1 '62becefdfa2b899d123259b9d640ab2090a5062c'
 
   head 'https://github.com/git-cola/git-cola.git'
 

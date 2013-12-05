@@ -7,9 +7,10 @@ class Phantomjs < Formula
 
   bottle do
     cellar :any
-    sha1 '8dc41cea65414ef1942cc7b4bddfd00a266c7812' => :mountain_lion
-    sha1 'b1843eb5e79b8e32e563b1e06f5370152689362f' => :lion
-    sha1 '3bc0bbeb43f625f3b56501bd4703dc51b96abd84' => :snow_leopard
+    revision 2
+    sha1 'd8eb4bb44e8569af5ffaab1b05c1dc85d208a1ff' => :mavericks
+    sha1 'f74ef5926657f37f370eb03c86f7eda50c70b978' => :mountain_lion
+    sha1 'b36a4516eb360b1ce63eea5aad75c406afdbeb9d' => :lion
   end
 
   def patches
@@ -19,12 +20,9 @@ class Phantomjs < Formula
   def install
     inreplace 'src/qt/preconfig.sh', '-arch x86', '-arch x86_64' if MacOS.prefer_64_bit?
     args = ['--confirm', '--qt-config']
-    # Fix Clang/LLVM 3DNow! intrinsic failure.
-    if MacOS.version >= :lion
-      args << '-no-3dnow'
-    else
-      args << '-no-3dnow -no-ssse3'
-    end
+    # we have to disable these to avoid triggering Qt optimization code
+    # that will fail in superenv (in --env=std, Qt seems aware of this)
+    args << '-no-3dnow -no-ssse3' if superenv?
     system './build.sh', *args
     bin.install 'bin/phantomjs'
     (share+'phantomjs').install 'examples'
