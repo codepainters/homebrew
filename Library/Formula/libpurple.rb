@@ -18,6 +18,7 @@ class Libpurple < Formula
   depends_on 'glib'
   depends_on 'intltool'
   depends_on 'meanwhile'
+  depends_on 'libidn'
 
 
   def options
